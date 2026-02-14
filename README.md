@@ -2,6 +2,10 @@
 
 PlanSpec + lint + safety gates for agent plans.
 
+## 5-Minute Demo
+
+Canonical demo repo: https://github.com/directiveproto/sdf-plangate-demo
+
 ## 3-Minute Quickstart
 
 ```bash
