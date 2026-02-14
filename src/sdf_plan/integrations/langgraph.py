@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from typing import Any, Dict, Optional
+from typing import Any, Dict
 
 from sdf_plan.client import decompose_via_api
 from sdf_plan.preflight import preflight_lint

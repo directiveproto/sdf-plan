@@ -1,0 +1,13 @@
+{
+  "plan_id": "legacy_v0",
+  "plan_version": "v0",
+  "template_key": "legacy",
+  "confidence": 0.5,
+  "nodes": [
+    {
+      "id": "S1",
+      "type": "ANALYZE",
+      "intent": "analyze constraints"
+    }
+  ]
+}

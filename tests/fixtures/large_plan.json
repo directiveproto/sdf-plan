@@ -1,0 +1,24 @@
+{
+  "steps": [
+    {"id":"S1","type":"ANALYZE","title":"Step 1","intent":"analyze step 1","inputs":[],"outputs":["ctx.s1"],"depends_on":[],"stop_condition":"step 1 complete","fallback":"reduce_scope"},
+    {"id":"S2","type":"ANALYZE","title":"Step 2","intent":"analyze step 2","inputs":["ctx.s1"],"outputs":["ctx.s2"],"depends_on":["S1"],"stop_condition":"step 2 complete","fallback":"reduce_scope"},
+    {"id":"S3","type":"ANALYZE","title":"Step 3","intent":"analyze step 3","inputs":["ctx.s2"],"outputs":["ctx.s3"],"depends_on":["S2"],"stop_condition":"step 3 complete","fallback":"reduce_scope"},
+    {"id":"S4","type":"ANALYZE","title":"Step 4","intent":"analyze step 4","inputs":["ctx.s3"],"outputs":["ctx.s4"],"depends_on":["S3"],"stop_condition":"step 4 complete","fallback":"reduce_scope"},
+    {"id":"S5","type":"ANALYZE","title":"Step 5","intent":"analyze step 5","inputs":["ctx.s4"],"outputs":["ctx.s5"],"depends_on":["S4"],"stop_condition":"step 5 complete","fallback":"reduce_scope"},
+    {"id":"S6","type":"ANALYZE","title":"Step 6","intent":"analyze step 6","inputs":["ctx.s5"],"outputs":["ctx.s6"],"depends_on":["S5"],"stop_condition":"step 6 complete","fallback":"reduce_scope"},
+    {"id":"S7","type":"ANALYZE","title":"Step 7","intent":"analyze step 7","inputs":["ctx.s6"],"outputs":["ctx.s7"],"depends_on":["S6"],"stop_condition":"step 7 complete","fallback":"reduce_scope"},
+    {"id":"S8","type":"ANALYZE","title":"Step 8","intent":"analyze step 8","inputs":["ctx.s7"],"outputs":["ctx.s8"],"depends_on":["S7"],"stop_condition":"step 8 complete","fallback":"reduce_scope"},
+    {"id":"S9","type":"ANALYZE","title":"Step 9","intent":"analyze step 9","inputs":["ctx.s8"],"outputs":["ctx.s9"],"depends_on":["S8"],"stop_condition":"step 9 complete","fallback":"reduce_scope"},
+    {"id":"S10","type":"ANALYZE","title":"Step 10","intent":"analyze step 10","inputs":["ctx.s9"],"outputs":["ctx.s10"],"depends_on":["S9"],"stop_condition":"step 10 complete","fallback":"reduce_scope"},
+    {"id":"S11","type":"ANALYZE","title":"Step 11","intent":"analyze step 11","inputs":["ctx.s10"],"outputs":["ctx.s11"],"depends_on":["S10"],"stop_condition":"step 11 complete","fallback":"reduce_scope"},
+    {"id":"S12","type":"ANALYZE","title":"Step 12","intent":"analyze step 12","inputs":["ctx.s11"],"outputs":["ctx.s12"],"depends_on":["S11"],"stop_condition":"step 12 complete","fallback":"reduce_scope"},
+    {"id":"S13","type":"ANALYZE","title":"Step 13","intent":"analyze step 13","inputs":["ctx.s12"],"outputs":["ctx.s13"],"depends_on":["S12"],"stop_condition":"step 13 complete","fallback":"reduce_scope"},
+    {"id":"S14","type":"ANALYZE","title":"Step 14","intent":"analyze step 14","inputs":["ctx.s13"],"outputs":["ctx.s14"],"depends_on":["S13"],"stop_condition":"step 14 complete","fallback":"reduce_scope"},
+    {"id":"S15","type":"ANALYZE","title":"Step 15","intent":"analyze step 15","inputs":["ctx.s14"],"outputs":["ctx.s15"],"depends_on":["S14"],"stop_condition":"step 15 complete","fallback":"reduce_scope"},
+    {"id":"S16","type":"ANALYZE","title":"Step 16","intent":"analyze step 16","inputs":["ctx.s15"],"outputs":["ctx.s16"],"depends_on":["S15"],"stop_condition":"step 16 complete","fallback":"reduce_scope"},
+    {"id":"S17","type":"ANALYZE","title":"Step 17","intent":"analyze step 17","inputs":["ctx.s16"],"outputs":["ctx.s17"],"depends_on":["S16"],"stop_condition":"step 17 complete","fallback":"reduce_scope"},
+    {"id":"S18","type":"ANALYZE","title":"Step 18","intent":"analyze step 18","inputs":["ctx.s17"],"outputs":["ctx.s18"],"depends_on":["S17"],"stop_condition":"step 18 complete","fallback":"reduce_scope"},
+    {"id":"S19","type":"ANALYZE","title":"Step 19","intent":"analyze step 19","inputs":["ctx.s18"],"outputs":["ctx.s19"],"depends_on":["S18"],"stop_condition":"step 19 complete","fallback":"reduce_scope"},
+    {"id":"S20","type":"ANALYZE","title":"Step 20","intent":"analyze step 20","inputs":["ctx.s19"],"outputs":["ctx.s20"],"depends_on":["S19"],"stop_condition":"step 20 complete","fallback":"reduce_scope"}
+  ]
+}

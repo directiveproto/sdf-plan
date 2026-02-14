@@ -1,0 +1,34 @@
+{
+  "input_plan": {
+    "steps": [
+      {
+        "id": "S1",
+        "type": "ACT",
+        "title": "send email",
+        "intent": "send email to customer",
+        "inputs": [],
+        "outputs": ["ctx.email_sent"],
+        "depends_on": [],
+        "stop_condition": "Email accepted by provider",
+        "fallback": "queue_retry",
+        "idempotency_key": "idem_s1"
+      },
+      {
+        "id": "S2",
+        "type": "VERIFY",
+        "title": "verify send",
+        "intent": "check provider status",
+        "inputs": ["ctx.email_sent"],
+        "outputs": ["ctx.verified"],
+        "depends_on": ["S1"],
+        "stop_condition": "Provider status OK",
+        "fallback": "manual_review"
+      }
+    ]
+  },
+  "expected_summary": {
+    "risk_flags_count": 1,
+    "confirm_required_steps_count": 1
+  },
+  "expected_findings": []
+}

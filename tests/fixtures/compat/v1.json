@@ -1,0 +1,21 @@
+{
+  "plan_id": "legacy_v1",
+  "version": "sdf.v1",
+  "template_key": "default",
+  "confidence": 0.7,
+  "steps": [
+    {
+      "id": "S1",
+      "type": "ACT",
+      "title": "send email",
+      "intent": "send onboarding email",
+      "inputs": [],
+      "outputs": [
+        "ctx.email_sent"
+      ],
+      "depends_on": [],
+      "stop_condition": "Email provider accepted message",
+      "fallback": "queue_retry"
+    }
+  ]
+}

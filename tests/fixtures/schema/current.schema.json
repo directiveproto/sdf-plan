@@ -1,0 +1,438 @@
+{
+  "$defs": {
+    "LintItem": {
+      "properties": {
+        "code": {
+          "title": "Code",
+          "type": "string"
+        },
+        "level": {
+          "enum": [
+            "WARN",
+            "ERROR"
+          ],
+          "title": "Level",
+          "type": "string"
+        },
+        "message": {
+          "title": "Message",
+          "type": "string"
+        },
+        "step_id": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Step Id"
+        }
+      },
+      "required": [
+        "level",
+        "code",
+        "message"
+      ],
+      "title": "LintItem",
+      "type": "object"
+    },
+    "PlanStep": {
+      "properties": {
+        "confirm": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Confirm"
+        },
+        "depends_on": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Depends On",
+          "type": "array"
+        },
+        "fallback": {
+          "title": "Fallback",
+          "type": "string"
+        },
+        "id": {
+          "title": "Id",
+          "type": "string"
+        },
+        "idempotency_key": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Idempotency Key"
+        },
+        "inputs": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Inputs",
+          "type": "array"
+        },
+        "intent": {
+          "title": "Intent",
+          "type": "string"
+        },
+        "io": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/StepIO"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        },
+        "outputs": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Outputs",
+          "type": "array"
+        },
+        "policy": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/StepPolicy"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        },
+        "retry": {
+          "default": 0,
+          "title": "Retry",
+          "type": "integer"
+        },
+        "stop": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/StepStop"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        },
+        "stop_condition": {
+          "title": "Stop Condition",
+          "type": "string"
+        },
+        "time_budget_sec": {
+          "default": 0,
+          "title": "Time Budget Sec",
+          "type": "integer"
+        },
+        "title": {
+          "title": "Title",
+          "type": "string"
+        },
+        "type": {
+          "title": "Type",
+          "type": "string"
+        }
+      },
+      "required": [
+        "id",
+        "type",
+        "title",
+        "intent",
+        "stop_condition",
+        "fallback"
+      ],
+      "title": "PlanStep",
+      "type": "object"
+    },
+    "PolicySummary": {
+      "properties": {
+        "confirm_required_steps_count": {
+          "title": "Confirm Required Steps Count",
+          "type": "integer"
+        },
+        "risk_flags_count": {
+          "title": "Risk Flags Count",
+          "type": "integer"
+        }
+      },
+      "required": [
+        "risk_flags_count",
+        "confirm_required_steps_count"
+      ],
+      "title": "PolicySummary",
+      "type": "object"
+    },
+    "ProvenanceInfo": {
+      "properties": {
+        "lint_rules_evaluated": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Lint Rules Evaluated",
+          "type": "array"
+        },
+        "rules_fired": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Rules Fired",
+          "type": "array"
+        },
+        "template_version": {
+          "title": "Template Version",
+          "type": "string"
+        }
+      },
+      "required": [
+        "template_version"
+      ],
+      "title": "ProvenanceInfo",
+      "type": "object"
+    },
+    "StepIO": {
+      "properties": {
+        "inputs": {
+          "items": {
+            "$ref": "#/$defs/TypedIOField"
+          },
+          "title": "Inputs",
+          "type": "array"
+        },
+        "outputs": {
+          "items": {
+            "$ref": "#/$defs/TypedIOField"
+          },
+          "title": "Outputs",
+          "type": "array"
+        }
+      },
+      "title": "StepIO",
+      "type": "object"
+    },
+    "StepPolicy": {
+      "properties": {
+        "confirm_prompt": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Confirm Prompt"
+        },
+        "requires_confirm": {
+          "default": false,
+          "title": "Requires Confirm",
+          "type": "boolean"
+        },
+        "risk_flags": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Risk Flags",
+          "type": "array"
+        }
+      },
+      "title": "StepPolicy",
+      "type": "object"
+    },
+    "StepStop": {
+      "properties": {
+        "expr": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Expr"
+        },
+        "hint": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Hint"
+        },
+        "kind": {
+          "default": "string",
+          "enum": [
+            "string",
+            "dsl"
+          ],
+          "title": "Kind",
+          "type": "string"
+        }
+      },
+      "title": "StepStop",
+      "type": "object"
+    },
+    "TypedIOField": {
+      "properties": {
+        "key": {
+          "title": "Key",
+          "type": "string"
+        },
+        "schema": {
+          "anyOf": [
+            {
+              "type": "object"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Schema"
+        }
+      },
+      "required": [
+        "key"
+      ],
+      "title": "TypedIOField",
+      "type": "object"
+    },
+    "UsageInfo": {
+      "properties": {
+        "billable_units": {
+          "title": "Billable Units",
+          "type": "integer"
+        },
+        "cache_hit": {
+          "default": false,
+          "title": "Cache Hit",
+          "type": "boolean"
+        },
+        "latency_ms": {
+          "title": "Latency Ms",
+          "type": "integer"
+        },
+        "plan_steps": {
+          "title": "Plan Steps",
+          "type": "integer"
+        }
+      },
+      "required": [
+        "billable_units",
+        "plan_steps",
+        "latency_ms"
+      ],
+      "title": "UsageInfo",
+      "type": "object"
+    }
+  },
+  "properties": {
+    "confidence": {
+      "title": "Confidence",
+      "type": "number"
+    },
+    "goal_spec": {
+      "title": "Goal Spec",
+      "type": "object"
+    },
+    "lint": {
+      "items": {
+        "$ref": "#/$defs/LintItem"
+      },
+      "title": "Lint",
+      "type": "array"
+    },
+    "mode_used": {
+      "default": "deterministic",
+      "title": "Mode Used",
+      "type": "string"
+    },
+    "plan_id": {
+      "title": "Plan Id",
+      "type": "string"
+    },
+    "policy_summary": {
+      "anyOf": [
+        {
+          "$ref": "#/$defs/PolicySummary"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null
+    },
+    "provenance": {
+      "anyOf": [
+        {
+          "$ref": "#/$defs/ProvenanceInfo"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null
+    },
+    "steps": {
+      "items": {
+        "$ref": "#/$defs/PlanStep"
+      },
+      "title": "Steps",
+      "type": "array"
+    },
+    "template_key": {
+      "title": "Template Key",
+      "type": "string"
+    },
+    "usage": {
+      "anyOf": [
+        {
+          "$ref": "#/$defs/UsageInfo"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null
+    },
+    "version": {
+      "default": "sdf.v1.2",
+      "title": "Version",
+      "type": "string"
+    }
+  },
+  "required": [
+    "plan_id",
+    "template_key",
+    "confidence"
+  ],
+  "title": "PlanSpecEnvelope",
+  "type": "object"
+}
