@@ -7,22 +7,76 @@
         "title": "send email",
         "intent": "send email to customer",
         "inputs": [],
-        "outputs": ["ctx.email_sent"],
+        "outputs": [
+          "ctx.email_sent"
+        ],
         "depends_on": [],
         "stop_condition": "Email accepted by provider",
         "fallback": "queue_retry",
-        "idempotency_key": "idem_s1"
+        "idempotency_key": "idem_s1",
+        "policy": {
+          "requires_confirm": true,
+          "confirm_prompt": "Confirm before executing side-effecting action",
+          "risk_flags": [
+            "external_write"
+          ]
+        },
+        "confirm": "Confirm before executing side-effecting action",
+        "stop": {
+          "kind": "string",
+          "hint": "Email accepted by provider",
+          "expr": null
+        },
+        "io": {
+          "inputs": [],
+          "outputs": [
+            {
+              "key": "ctx.email_sent",
+              "schema": null
+            }
+          ]
+        }
       },
       {
         "id": "S2",
         "type": "VERIFY",
         "title": "verify send",
         "intent": "check provider status",
-        "inputs": ["ctx.email_sent"],
-        "outputs": ["ctx.verified"],
-        "depends_on": ["S1"],
+        "inputs": [
+          "ctx.email_sent"
+        ],
+        "outputs": [
+          "ctx.verified"
+        ],
+        "depends_on": [
+          "S1"
+        ],
         "stop_condition": "Provider status OK",
-        "fallback": "manual_review"
+        "fallback": "manual_review",
+        "policy": {
+          "requires_confirm": false,
+          "confirm_prompt": null,
+          "risk_flags": []
+        },
+        "stop": {
+          "kind": "string",
+          "hint": "Provider status OK",
+          "expr": null
+        },
+        "io": {
+          "inputs": [
+            {
+              "key": "ctx.email_sent",
+              "schema": null
+            }
+          ],
+          "outputs": [
+            {
+              "key": "ctx.verified",
+              "schema": null
+            }
+          ]
+        }
       }
     ]
   },
