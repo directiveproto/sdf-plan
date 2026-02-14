@@ -7,6 +7,8 @@ from typing import Dict, Set
 SUPPORTED_SCHEMA_HASHES: Dict[str, Set[str]] = {
     # Populate this set as Cloud schema evolves.
     "0.1.0": set(),
+    "0.1.1": set(),
+    "0.1.2": set(),
 }
 
 
@@ -14,7 +16,7 @@ def package_version() -> str:
     try:
         return version("sdf-plan")
     except Exception:
-        return "0.1.0"
+        return "0.1.2"
 
 
 def assert_schema_compat(pkg_version: str, schema_hash: str) -> None:
