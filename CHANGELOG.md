@@ -1,5 +1,13 @@
 # Changelog
 
+## 0.2.1 - 2026-02-15
+
+### Changed
+- Release hygiene follow-up after `0.2.0`:
+  - removed accidentally tracked local virtualenv artifacts from repository history tip
+  - tightened ignore rules for local venv and bytecode artifacts
+- No API or behavior changes from `0.2.0`.
+
 ## 0.2.0 - 2026-02-15
 
 ### Added
