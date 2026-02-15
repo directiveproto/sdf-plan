@@ -1,0 +1,46 @@
+{
+  "properties": {
+    "args": {
+      "title": "Args",
+      "type": "object"
+    },
+    "meta": {
+      "title": "Meta",
+      "type": "object"
+    },
+    "policy": {
+      "anyOf": [
+        {
+          "type": "object"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Policy"
+    },
+    "run_context": {
+      "anyOf": [
+        {
+          "type": "object"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Run Context"
+    },
+    "tool_name": {
+      "minLength": 1,
+      "title": "Tool Name",
+      "type": "string"
+    }
+  },
+  "required": [
+    "tool_name"
+  ],
+  "title": "ToolGateRequest",
+  "type": "object"
+}

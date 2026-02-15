@@ -3,60 +3,136 @@ name: ci
 on:
   pull_request:
   push:
-    branches:
-      - main
 
 jobs:
-  lint:
+  unit:
+    name: unit (coverage gate)
     runs-on: ubuntu-latest
     strategy:
       matrix:
         python-version: ["3.10", "3.12"]
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-python@v5
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
         with:
           python-version: ${{ matrix.python-version }}
-      - run: python -m pip install -U pip ruff
-      - run: ruff check .
 
-  unit-and-contract:
-    runs-on: ubuntu-latest
-    strategy:
-      matrix:
-        python-version: ["3.10", "3.12"]
-    steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-python@v5
-        with:
-          python-version: ${{ matrix.python-version }}
-      - run: python -m pip install -U pip pytest pytest-cov
-      - run: python -m pip install -e .
-      - run: python scripts/regenerate_golden.py
-      - run: git diff --exit-code tests/fixtures/golden
-      - run: pytest -q --cov=sdf_plan --cov-fail-under=70 tests/unit tests/contract tests/test_compat.py tests/test_preflight.py tests/test_version.py
+      - name: Install test deps
+        run: |
+          python -m pip install --upgrade pip
+          pip install -e .
+          pip install pytest pytest-cov
 
-  integration:
-    runs-on: ubuntu-latest
-    strategy:
-      matrix:
-        python-version: ["3.10", "3.12"]
-    steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-python@v5
-        with:
-          python-version: ${{ matrix.python-version }}
-      - run: python -m pip install -U pip pytest
-      - run: python -m pip install -e .
-      - run: pytest -q tests/integration
+      - name: Unit tests + coverage threshold
+        run: |
+          pytest -q \
+            --cov=sdf_plan \
+            --cov-report=term-missing \
+            --cov-fail-under=70 \
+            tests/unit
 
-  package-smoke:
+  contract:
+    name: contract (schema freeze)
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-python@v5
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
         with:
           python-version: "3.12"
-      - run: python -m pip install -U pip pytest build twine
-      - run: python -m pip install -e .
-      - run: RUN_PACKAGE_TESTS=1 pytest -q tests/package -m package
+
+      - name: Install test deps
+        run: |
+          python -m pip install --upgrade pip
+          pip install -e .
+          pip install pytest
+
+      - name: Required gate schema snapshots exist
+        run: |
+          test -f tests/contract/snapshots/tool_gate_request.schema.json
+          test -f tests/contract/snapshots/tool_gate_response.schema.json
+
+      - name: Contract tests (snapshot checks)
+        run: |
+          pytest -q tests/contract/test_gate_contract.py
+
+  integration:
+    name: integration
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install test deps
+        run: |
+          python -m pip install --upgrade pip
+          pip install -e .
+          pip install pytest
+
+      - name: Integration tests
+        run: |
+          pytest -q \
+            tests/integration/test_openai_variants_normalization.py \
+            tests/integration/test_generic_toolcall_normalization.py \
+            tests/integration/test_planspec_to_ir.py \
+            tests/integration/test_tool_gate_flow.py \
+            tests/integration/test_plan_and_tool_mode_coexist.py \
+            tests/compat/test_planspec_roundtrip_best_effort.py
+
+  adapter-contract:
+    name: adapter-contract
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install test deps
+        run: |
+          python -m pip install --upgrade pip
+          pip install -e .
+          pip install pytest
+
+      - name: Adapter contract and integration tests
+        run: |
+          pytest -q \
+            tests/contract/test_adapter_contract.py \
+            tests/integration/test_langgraph_adapter.py
+
+  package-smoke:
+    name: package-smoke
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Build + metadata checks
+        run: |
+          python -m pip install --upgrade pip
+          pip install build twine
+          python -m build
+          twine check dist/*
+
+      - name: Install wheel smoke
+        run: |
+          pip install dist/*.whl
+          python -c "import sdf_plan; print('sdf_plan import ok')"

@@ -1,0 +1,117 @@
+{
+  "$defs": {
+    "GateDecision": {
+      "enum": [
+        "ALLOW",
+        "REQUIRE_CONFIRM",
+        "BLOCK",
+        "WARN"
+      ],
+      "title": "GateDecision",
+      "type": "string"
+    },
+    "GateErrorCode": {
+      "enum": [
+        "INVALID_TOKEN",
+        "TOKEN_EXPIRED",
+        "TOKEN_TAMPERED",
+        "POLICY_BLOCKED"
+      ],
+      "title": "GateErrorCode",
+      "type": "string"
+    },
+    "ToolGateResume": {
+      "properties": {
+        "idempotency_key": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Idempotency Key"
+        },
+        "token": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Token"
+        }
+      },
+      "title": "ToolGateResume",
+      "type": "object"
+    }
+  },
+  "properties": {
+    "confirm_prompt": {
+      "anyOf": [
+        {
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Confirm Prompt"
+    },
+    "decision": {
+      "$ref": "#/$defs/GateDecision"
+    },
+    "error_code": {
+      "anyOf": [
+        {
+          "$ref": "#/$defs/GateErrorCode"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null
+    },
+    "reason": {
+      "anyOf": [
+        {
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Reason"
+    },
+    "resume": {
+      "anyOf": [
+        {
+          "$ref": "#/$defs/ToolGateResume"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null
+    },
+    "risk_flags": {
+      "items": {
+        "type": "string"
+      },
+      "title": "Risk Flags",
+      "type": "array"
+    }
+  },
+  "required": [
+    "decision"
+  ],
+  "title": "ToolGateResponse",
+  "type": "object"
+}

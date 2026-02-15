@@ -3,20 +3,6 @@ from __future__ import annotations
 from typing import Any, Dict, List, Set
 
 
-LINT_RULES_EVALUATED = [
-    "PLAN_TOO_LONG",
-    "MISSING_STOP_CONDITION",
-    "MISSING_FALLBACK",
-    "UNVERIFIABLE_STOP",
-    "CYCLE_DETECTED",
-    "DUPLICATE_OUTPUT_KEY",
-    "UNUSED_OUTPUT",
-    "ACT_WITHOUT_IDEMPOTENCY",
-    "WRITE_WITHOUT_CONFIRM",
-    "NO_VERIFY_BEFORE_WRITE",
-]
-
-
 def lint_plan(plan: Dict[str, Any], max_steps: int, safety_mode: str = "safe") -> List[Dict[str, Any]]:
     steps = plan.get("steps", []) or []
     lint: List[Dict[str, Any]] = []
