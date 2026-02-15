@@ -1,5 +1,13 @@
 # Changelog
 
+## 0.2.3 - 2026-02-15
+
+### Fixed
+- GitHub Actions command formatting hardened for cross-platform line endings:
+  replaced multiline `pytest` backslash continuations with single-line commands
+  in `.github/workflows/ci.yml` and `.github/workflows/release.yml`.
+- This fixes false CI/release failures caused by CRLF + shell continuation parsing.
+
 ## 0.2.2 - 2026-02-15
 
 ### Fixed

@@ -27,16 +27,7 @@ jobs:
           pip install pytest pytest-cov
 
       - name: Unit tests + coverage threshold
-        run: |
-          pytest -q \
-            --cov=sdf_plan \
-            --cov-report=term-missing \
-            --cov-fail-under=70 \
-            tests/contract/test_gate_contract.py \
-            tests/contract/test_adapter_contract.py \
-            tests/unit \
-            tests/integration \
-            tests/compat/test_planspec_roundtrip_best_effort.py
+        run: pytest -q --cov=sdf_plan --cov-report=term-missing --cov-fail-under=70 tests/contract/test_gate_contract.py tests/contract/test_adapter_contract.py tests/unit tests/integration tests/compat/test_planspec_roundtrip_best_effort.py
 
   contract:
     name: contract (schema freeze)
@@ -84,14 +75,7 @@ jobs:
           pip install pytest
 
       - name: Integration tests
-        run: |
-          pytest -q \
-            tests/integration/test_openai_variants_normalization.py \
-            tests/integration/test_generic_toolcall_normalization.py \
-            tests/integration/test_planspec_to_ir.py \
-            tests/integration/test_tool_gate_flow.py \
-            tests/integration/test_plan_and_tool_mode_coexist.py \
-            tests/compat/test_planspec_roundtrip_best_effort.py
+        run: pytest -q tests/integration/test_openai_variants_normalization.py tests/integration/test_generic_toolcall_normalization.py tests/integration/test_planspec_to_ir.py tests/integration/test_tool_gate_flow.py tests/integration/test_plan_and_tool_mode_coexist.py tests/compat/test_planspec_roundtrip_best_effort.py
 
   adapter-contract:
     name: adapter-contract
@@ -112,10 +96,7 @@ jobs:
           pip install pytest
 
       - name: Adapter contract and integration tests
-        run: |
-          pytest -q \
-            tests/contract/test_adapter_contract.py \
-            tests/integration/test_langgraph_adapter.py
+        run: pytest -q tests/contract/test_adapter_contract.py tests/integration/test_langgraph_adapter.py
 
   package-smoke:
     name: package-smoke
