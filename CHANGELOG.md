@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.2.5 - 2026-02-15
+
+### Fixed
+- PyPI release workflow now uses skip-existing: true in publish step to make reruns idempotent when one artifact from the same version already exists.
+- Prevents false release failures caused by partial prior uploads.
 ## 0.2.4 - 2026-02-15
 
 ### Fixed
