@@ -1,5 +1,13 @@
 # Changelog
 
+## 0.2.4 - 2026-02-15
+
+### Fixed
+- Stabilized contract schema snapshots across Pydantic patch differences by
+  normalizing explicit `additionalProperties: true` entries before comparison
+  in `tests/contract/test_gate_contract.py`.
+- This resolves CI/release failures in `contract` and `unit` jobs on Linux.
+
 ## 0.2.3 - 2026-02-15
 
 ### Fixed
