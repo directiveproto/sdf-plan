@@ -50,7 +50,14 @@ python examples/plan_mode_preflight.py
 - Idempotency key derivation from scope + tool + canonical args
 - Tool-mode lint rules + policy defaults
 - PlanSpec lint and preflight (optional mode)
-- LangGraph adapter (official thin wrapper)
+- LangGraph adapter (official thin wrapper for v0.2.0)
+
+## Support Matrix (v0.2.0)
+
+- Official maintained adapter: `LangGraph`
+- Direct parser support: OpenAI-style tool calls, generic tool call JSON, PlanSpec
+- BYO adapter support: any framework that can pass `(tool_name, args, meta, run_context)` into `propose(...)`
+- Deferred official adapters: LangChain, CrewAI (v0.2.1+)
 
 ## Optional PlanSpec Mode
 
@@ -82,6 +89,9 @@ preflight_lint(plan, max_steps=12, safety_mode="safe")
 
 ## Guides
 
+- `docs/API_REFERENCE.md`
+- `docs/ARCHITECTURE.md`
+- `docs/SECURITY_MODEL.md`
 - `docs/ADAPTER_TEMPLATE.md`
 - `docs/POLICY_TUNING.md`
 - `docs/TOOL_CLASSIFICATION.md`
@@ -94,7 +104,49 @@ preflight_lint(plan, max_steps=12, safety_mode="safe")
 - `examples/plan_mode_preflight.py`
 - `examples/adapter_minimal.py`
 - `examples/langgraph_plangate_demo.py`
-- `examples/crewai_plangate_demo.py`
+- `examples/crewai_plangate_demo.py` (community-style example, not an official adapter contract in v0.2.0)
+
+## Testing (CI Parity)
+
+Install dev/test dependencies:
+
+```bash
+pip install -e .
+pip install pytest pytest-cov build twine
+```
+
+Fast local checks (matches PR path):
+
+```bash
+pytest -q -m "not slow" tests/unit
+pytest -q tests/contract/test_gate_contract.py tests/contract/test_adapter_contract.py
+pytest -q -m "not slow" tests/integration/test_openai_variants_normalization.py tests/integration/test_generic_toolcall_normalization.py tests/integration/test_planspec_to_ir.py tests/integration/test_tool_gate_flow.py tests/integration/test_tool_gate_concurrency.py tests/integration/test_plan_and_tool_mode_coexist.py tests/compat/test_planspec_roundtrip_best_effort.py
+pytest -q tests/unit/test_token_security.py tests/integration/test_tool_gate_concurrency.py
+```
+
+Coverage gates:
+
+```bash
+pytest -q --cov=sdf_plan --cov-report=term-missing --cov-fail-under=70 tests/unit tests/integration
+pytest -q --cov=sdf_plan.gate --cov-fail-under=70 tests/unit tests/integration
+pytest -q --cov=sdf_plan.policy --cov-fail-under=70 tests/unit tests/integration
+pytest -q --cov=sdf_plan.inputs --cov-fail-under=70 tests/unit tests/integration
+```
+
+Nightly/slow checks:
+
+```bash
+pytest -q -m slow tests/integration/test_fuzz_inputs.py tests/integration/test_perf_budget.py
+```
+
+Packaging smoke:
+
+```bash
+python -m build
+twine check dist/*
+pip install dist/*.whl
+python -c "import sdf_plan; print('sdf_plan import ok')"
+```
 
 ## Compatibility
 
@@ -105,3 +157,8 @@ from sdf_plan.compat import assert_schema_compat, package_version
 
 assert_schema_compat(package_version(), "schema_hash_from_/v1/schema")
 ```
+
+## License
+
+This project is licensed under the MIT License.
+See `LICENSE` for the full text.
