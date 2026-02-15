@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.2.6 - 2026-02-15
+
+### Fixed
+- Updated build backend requirement to setuptools>=77 so sdist names are generated in canonical form (sdf_plan-*.tar.gz) accepted by PyPI.
+- Resolves repeated PyPI 400 failures caused by invalid/non-canonical sdist filename format.
 ## 0.2.5 - 2026-02-15
 
 ### Fixed
