@@ -1,5 +1,15 @@
 # Changelog
 
+## 0.2.2 - 2026-02-15
+
+### Fixed
+- Restored backward-compat lint utility exports from `sdf_plan.lint`:
+  - `_has_cycle`
+  - `_looks_like_external_write`
+  - `_unverifiable_stop_condition`
+- CI coverage gate now measures representative contract/unit/integration/compat suites
+  against package-wide coverage threshold to avoid false failures.
+
 ## 0.2.1 - 2026-02-15
 
 ### Changed

@@ -32,7 +32,11 @@ jobs:
             --cov=sdf_plan \
             --cov-report=term-missing \
             --cov-fail-under=70 \
-            tests/unit
+            tests/contract/test_gate_contract.py \
+            tests/contract/test_adapter_contract.py \
+            tests/unit \
+            tests/integration \
+            tests/compat/test_planspec_roundtrip_best_effort.py
 
   contract:
     name: contract (schema freeze)
