@@ -37,3 +37,24 @@ If you use framework wrappers:
 
 All wrappers are thin and call `propose(...)` internally.
 
+## 6. Legacy integration note
+`sdf_plan.integrations.*` is the pre-ToolGate decomposition-client path. It is
+still available for compatibility, but new integrations should use
+`sdf_plan.adapters.*` for runtime gating semantics.
+
+Quick mapping:
+
+| Legacy path | ToolGate-first replacement |
+|---|---|
+| `sdf_plan.integrations.langgraph.sdf_node` | `sdf_plan.adapters.langgraph.langgraph_tool_gate_node` |
+| `sdf_plan.integrations.crewai.SDFTool` | `sdf_plan.adapters.crewai.crewai_tool_gate` |
+
+## 7. Strict mode migration note
+
+If you enable strict mode, this behavior changes by design:
+
+- write tools without `ctx.workspace_id` are blocked (`STRICT_SCOPE_REQUIRED`)
+- deep payload validation can be enforced with `tool_args_validator`
+
+Apply strict mode in staged rollout: development -> staging -> production.
+

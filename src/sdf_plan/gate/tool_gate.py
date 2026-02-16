@@ -194,6 +194,7 @@ def confirm(token: str, user_ok: bool = True) -> ConfirmResponse:
         )
         return out
 
+    token_jti = payload.get("jti")
     out = ConfirmResponse(
         decision=GateDecision.ALLOW,
         confirmed=True,
@@ -208,6 +209,8 @@ def confirm(token: str, user_ok: bool = True) -> ConfirmResponse:
             "confirmed": out.confirmed,
             "error_code": out.error_code.value if out.error_code else None,
             "idempotency_key": out.idempotency_key,
+            "jti": token_jti,
+            "legacy_token": token_jti is None,
         }
     )
     return out
@@ -223,6 +226,7 @@ def propose(
 ) -> ToolGateResponse:
     if (
         isinstance(ctx, dict)
+        and bool(ctx)
         and meta is None
         and run_context is None
         and not any(k in ctx for k in {"workspace_id", "user_id", "session_id", "metadata"})
@@ -244,7 +248,9 @@ def propose(
     run_ctx = _run_context_with_ctx(run_ctx, resolved_ctx)
 
     gp = _to_policy(policy)
-    if gp.strict_mode or bool(get_config().strict_args):
+    cfg = get_config()
+    strict_enabled = gp.strict_mode or bool(cfg.strict_args)
+    if strict_enabled:
         strict_error = _validate_strict_inputs(
             args=args_norm,
             meta=meta_norm,
@@ -291,6 +297,7 @@ def propose(
 
     verify_warning = False
     verify_block = False
+    confirmed_token_legacy = False
     if is_write and gp.verify_before_write != VerifyBeforeWriteMode.OFF:
         if not has_verify_context(run_ctx):
             if gp.verify_before_write == VerifyBeforeWriteMode.WARN:
@@ -319,28 +326,61 @@ def propose(
     # check whether a confirmed token has already satisfied confirmation
     confirmed_token = meta_norm.get("confirmed_token")
     if confirmed_token:
-        c = confirm(str(confirmed_token), user_ok=True)
-        if c.confirmed:
-            args_h = hash_canonical(args_norm)
-            expected_scope = resolved_ctx.workspace_id
-            try:
-                payload = verify_token(str(confirmed_token), now_fn=_now)
-            except ValueError:
-                payload = None
-            if (
-                payload
-                and payload.get("tool") == tool_name_norm
-                and payload.get("args_hash") == args_h
-                and payload.get("scope") == expected_scope
-            ):
-                requires_confirm = False
-                policy_block = False
-                verify_warning = False
-                verify_block = False
+        args_h = hash_canonical(args_norm, strict=strict_enabled)
+        expected_scope = resolved_ctx.workspace_id
+        try:
+            payload = verify_token(str(confirmed_token), now_fn=_now)
+        except ValueError:
+            payload = None
+        if (
+            payload
+            and payload.get("tool") == tool_name_norm
+            and payload.get("args_hash") == args_h
+            and payload.get("scope") == expected_scope
+        ):
+            requires_confirm = False
+            policy_block = False
+            verify_warning = False
+            verify_block = False
+            confirmed_token_legacy = payload.get("jti") is None
 
     # 4) idempotency checks
     idempotency_key = None
     if is_write and gp.require_idempotency_for_write:
+        if strict_enabled and not resolved_ctx.workspace_id:
+            out = _strict_error("STRICT_SCOPE_REQUIRED: workspace_id is required for write tools in strict mode")
+            _emit_audit(
+                {
+                    "event": "propose",
+                    "tool": tool_name_norm,
+                    "decision": out.decision.value,
+                    "reason": out.reason,
+                    "risk_flags": list(risk_flags),
+                    "idempotency_key": None,
+                    "ctx": resolved_ctx.model_dump(),
+                    "meta": meta_norm,
+                    "confirmed_token_legacy": confirmed_token_legacy,
+                }
+            )
+            return out
+        if cfg.tool_args_validator is not None:
+            try:
+                cfg.tool_args_validator(tool_name_norm, args_norm)
+            except Exception as exc:
+                out = _strict_error(f"STRICT_ARGS_VALIDATION_FAILED: {exc}")
+                _emit_audit(
+                    {
+                        "event": "propose",
+                        "tool": tool_name_norm,
+                        "decision": out.decision.value,
+                        "reason": out.reason,
+                        "risk_flags": [],
+                        "idempotency_key": None,
+                        "ctx": resolved_ctx.model_dump(),
+                        "meta": meta_norm,
+                    }
+                )
+                return out
         scope = resolved_ctx.workspace_id or "global"
         exclude_fields = meta_norm.get("idempotency_exclude_fields") or []
         idempotency_key = generate_idempotency_key(
@@ -348,6 +388,7 @@ def propose(
             tool_name=tool_name_norm,
             args=args_norm,
             exclude_fields=exclude_fields,
+            strict=strict_enabled,
         )
 
     # 5) decision build
@@ -382,12 +423,13 @@ def propose(
                 "idempotency_key": None,
                 "ctx": resolved_ctx.model_dump(),
                 "meta": meta_norm,
+                "confirmed_token_legacy": confirmed_token_legacy,
             }
         )
         return out
 
     if requires_confirm:
-        args_h = hash_canonical(args_norm)
+        args_h = hash_canonical(args_norm, strict=strict_enabled)
         token = issue_resume_token(
             tool_name=tool_name_norm,
             args_hash=args_h,
@@ -413,6 +455,7 @@ def propose(
                 "idempotency_key": idempotency_key,
                 "ctx": resolved_ctx.model_dump(),
                 "meta": meta_norm,
+                "confirmed_token_legacy": confirmed_token_legacy,
             }
         )
         return out
@@ -435,6 +478,7 @@ def propose(
                 "idempotency_key": idempotency_key,
                 "ctx": resolved_ctx.model_dump(),
                 "meta": meta_norm,
+                "confirmed_token_legacy": confirmed_token_legacy,
             }
         )
         return out
@@ -456,6 +500,7 @@ def propose(
             "idempotency_key": idempotency_key,
             "ctx": resolved_ctx.model_dump(),
             "meta": meta_norm,
+            "confirmed_token_legacy": confirmed_token_legacy,
         }
     )
     return out

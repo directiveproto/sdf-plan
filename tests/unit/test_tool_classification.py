@@ -45,3 +45,39 @@ def test_classify_tool_uses_override_map() -> None:
     c = classify_tool("x.y", merged)
     assert c.category == "privileged"
     assert c.risk_flags == ["shell_exec"]
+
+
+def test_exact_match_overrides_prefix_match() -> None:
+    merged = load_tool_risk_map(
+        {
+            "filesystem.*": {"category": "write_local", "risk_flags": ["write"]},
+            "filesystem.read": {"category": "read_only", "risk_flags": []},
+        }
+    )
+    c = classify_tool("filesystem.read", merged)
+    assert c.category == "read_only"
+    assert c.risk_flags == []
+
+
+def test_longest_prefix_match_wins() -> None:
+    merged = load_tool_risk_map(
+        {
+            "filesystem.*": {"category": "write_local", "risk_flags": ["write"]},
+            "filesystem.secure.*": {"category": "privileged", "risk_flags": ["credential_access"]},
+        }
+    )
+    c = classify_tool("filesystem.secure.write", merged)
+    assert c.category == "privileged"
+    assert c.risk_flags == ["credential_access"]
+
+
+def test_prefix_matching_is_deterministic_for_ties() -> None:
+    merged = load_tool_risk_map(
+        {
+            "alpha.beta.*": {"category": "network", "risk_flags": ["network_access"]},
+            "alpha.betb.*": {"category": "write_external", "risk_flags": ["write"]},
+        }
+    )
+    first = classify_tool("alpha.beta.tool", merged)
+    second = classify_tool("alpha.beta.tool", merged)
+    assert first.model_dump() == second.model_dump()

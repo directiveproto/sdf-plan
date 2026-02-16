@@ -1,4 +1,5 @@
 {
+  "filesystem.*": { "category": "write_local", "risk_flags": ["write", "external_side_effect"] },
   "filesystem.read": { "category": "read_only", "risk_flags": [] },
   "filesystem.list": { "category": "read_only", "risk_flags": [] },
   "filesystem.stat": { "category": "read_only", "risk_flags": [] },
@@ -7,13 +8,15 @@
   "filesystem.append": { "category": "write_local", "risk_flags": ["write", "external_side_effect"] },
   "filesystem.delete": { "category": "write_local", "risk_flags": ["write", "external_side_effect"] },
   "filesystem.move": { "category": "write_local", "risk_flags": ["write", "external_side_effect"] },
-  "filesystem.copy": { "category": "write_local", "risk_flags": ["write", "external_side_effect"] },
+  "filesystem.copy": { "category": "write_external", "risk_flags": ["write", "external_side_effect", "data_exfiltration"] },
   "filesystem.chmod": { "category": "privileged", "risk_flags": ["write", "external_side_effect", "credential_access"] },
   "web.search": { "category": "network", "risk_flags": ["network_access"] },
   "web.fetch": { "category": "network", "risk_flags": ["network_access"] },
+  "http.*": { "category": "network", "risk_flags": ["network_access"] },
   "http.get": { "category": "network", "risk_flags": ["network_access"] },
-  "http.post": { "category": "write_external", "risk_flags": ["write", "network_access", "external_side_effect"] },
-  "http.delete": { "category": "write_external", "risk_flags": ["write", "network_access", "external_side_effect"] },
+  "http.post": { "category": "write_external", "risk_flags": ["write", "network_access", "external_side_effect", "prod_change"] },
+  "http.delete": { "category": "write_external", "risk_flags": ["write", "network_access", "external_side_effect", "prod_change"] },
+  "db.*": { "category": "read_only", "risk_flags": [] },
   "db.query": { "category": "read_only", "risk_flags": [] },
   "db.select": { "category": "read_only", "risk_flags": [] },
   "db.execute": { "category": "write_external", "risk_flags": ["write", "external_side_effect", "prod_change"] },
@@ -23,7 +26,7 @@
   "redis.set": { "category": "write_external", "risk_flags": ["write", "external_side_effect"] },
   "queue.publish": { "category": "write_external", "risk_flags": ["write", "external_side_effect"] },
   "queue.consume": { "category": "read_only", "risk_flags": [] },
-  "email.send": { "category": "write_external", "risk_flags": ["write", "external_side_effect"] },
+  "email.send": { "category": "write_external", "risk_flags": ["write", "external_side_effect", "data_exfiltration"] },
   "slack.post_message": { "category": "write_external", "risk_flags": ["write", "external_side_effect"] },
   "github.create_issue": { "category": "write_external", "risk_flags": ["write", "external_side_effect"] },
   "github.comment": { "category": "write_external", "risk_flags": ["write", "external_side_effect"] },
@@ -38,7 +41,12 @@
   "cloud.terminate_instance": { "category": "privileged", "risk_flags": ["write", "prod_change", "external_side_effect"] },
   "k8s.apply": { "category": "privileged", "risk_flags": ["write", "prod_change", "external_side_effect"] },
   "k8s.delete": { "category": "privileged", "risk_flags": ["write", "prod_change", "external_side_effect"] },
-  "shell.exec": { "category": "privileged", "risk_flags": ["shell_exec", "external_side_effect"] },
-  "python.exec": { "category": "privileged", "risk_flags": ["shell_exec", "external_side_effect"] }
+  "shell.exec": { "category": "privileged", "risk_flags": ["shell_exec", "external_side_effect", "credential_access", "prod_change"] },
+  "python.exec": { "category": "privileged", "risk_flags": ["shell_exec", "external_side_effect", "credential_access", "prod_change"] },
+  "browser.*": { "category": "network", "risk_flags": ["network_access"] },
+  "browser.navigate": { "category": "network", "risk_flags": ["network_access"] },
+  "browser.click": { "category": "network", "risk_flags": ["network_access"] },
+  "browser.type": { "category": "write_external", "risk_flags": ["write", "external_side_effect", "network_access"] },
+  "browser.download": { "category": "write_external", "risk_flags": ["write", "external_side_effect", "network_access", "data_exfiltration"] }
 }
 

@@ -4,6 +4,7 @@ import base64
 import hashlib
 import hmac
 import json
+import secrets
 import time
 from typing import Any
 
@@ -65,6 +66,7 @@ def issue_resume_token(
     cfg = get_config()
     ttl = int(ttl_sec if ttl_sec is not None else cfg.token_ttl)
     payload = {
+        "jti": secrets.token_urlsafe(16),
         "tool": tool_name,
         "args_hash": args_hash,
         "scope": scope,

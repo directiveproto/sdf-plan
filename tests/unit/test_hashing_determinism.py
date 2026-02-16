@@ -35,3 +35,19 @@ def test_nulls_are_stable() -> None:
 def test_non_finite_floats_raise() -> None:
     with pytest.raises(ValueError, match="non-finite"):
         canonical_json({"x": float("nan")})
+
+
+def test_strict_hash_rejects_non_json_native_values() -> None:
+    class CustomObject:
+        pass
+
+    with pytest.raises(ValueError, match="non-JSON-native"):
+        hash_canonical({"x": CustomObject()}, strict=True)
+
+
+def test_non_strict_hash_coerces_non_json_native_values() -> None:
+    class CustomObject:
+        def __str__(self) -> str:
+            return "custom-value"
+
+    assert hash_canonical({"x": CustomObject()}) == hash_canonical({"x": "custom-value"})

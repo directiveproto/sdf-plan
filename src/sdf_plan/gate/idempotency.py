@@ -34,9 +34,14 @@ def apply_exclusions(args: dict[str, Any], exclude_fields: Iterable[str] | None 
     return materialized
 
 
-def args_hash(args: dict[str, Any], exclude_fields: Iterable[str] | None = None) -> str:
+def args_hash(
+    args: dict[str, Any],
+    exclude_fields: Iterable[str] | None = None,
+    *,
+    strict: bool = False,
+) -> str:
     filtered = apply_exclusions(args, exclude_fields=exclude_fields)
-    return hash_canonical(filtered)
+    return hash_canonical(filtered, strict=strict)
 
 
 def generate_idempotency_key(
@@ -45,12 +50,13 @@ def generate_idempotency_key(
     tool_name: str,
     args: dict[str, Any],
     exclude_fields: Iterable[str] | None = None,
+    strict: bool = False,
     prefix: str = "idem",
 ) -> str:
     payload = {
         "scope": scope,
         "tool": (tool_name or "").strip().lower(),
-        "args_hash": args_hash(args, exclude_fields=exclude_fields),
+        "args_hash": args_hash(args, exclude_fields=exclude_fields, strict=strict),
     }
-    digest = hash_canonical(payload)
+    digest = hash_canonical(payload, strict=strict)
     return f"{prefix}_{digest}"

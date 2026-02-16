@@ -40,6 +40,29 @@ Expected flow: `REQUIRE_CONFIRM -> CONFIRM -> ALLOW`
 pip install sdf-plan
 ```
 
+Production note: set a strong `SDF_PLAN_TOKEN_SECRET`. Development fallback is warning-only and not for deployed environments.
+
+## Replay Protection (`jti` Store)
+
+`confirm(...)` is stateless in OSS mode. For strict replay protection, store token `jti` values server-side.
+
+```python
+from sdf_plan._internal.token import verify_token
+from sdf_plan import confirm
+
+used_jti: set[str] = set()
+
+def confirm_once(token: str):
+    payload = verify_token(token)
+    jti = payload.get("jti")
+    if jti and jti in used_jti:
+        raise RuntimeError("replay detected")
+    result = confirm(token, user_ok=True)
+    if result.confirmed and jti:
+        used_jti.add(jti)
+    return result
+```
+
 ## 5-Minute First Success
 
 ```bash
@@ -47,6 +70,13 @@ python examples/tool_gate_quickstart.py
 python examples/tool_gate_openai_input.py
 python examples/plan_mode_preflight.py
 ```
+
+## Adapter vs Legacy Integration
+
+| Path | Use case | Status |
+|---|---|---|
+| `sdf_plan.adapters.*` | Runtime ToolGate decisions (`propose/confirm`) | Recommended |
+| `sdf_plan.integrations.*` | Legacy decomposition-client flow | Legacy (compat only) |
 
 ## CLI
 
@@ -58,19 +88,27 @@ sdf-plan classify --tool filesystem.write
 ## What You Get
 
 - ToolGate runtime decisions (`ALLOW | REQUIRE_CONFIRM | WARN | BLOCK`)
-- Signed confirmation tokens + resume flow
+- Signed confirmation tokens (`jti`, expiry, scope/tool/args binding) + resume flow
 - Idempotency key derivation from scope + tool + canonical args
 - Tool-mode lint rules + policy defaults
 - PlanSpec lint and preflight (optional mode)
-- LangGraph adapter (official thin wrapper for v0.2.7)
+- LangGraph adapter (official thin wrapper for v0.2.x)
 
-## Support Matrix (v0.2.7)
+## Support Matrix (v0.2.8)
 
 - Official maintained adapter: `LangGraph`
 - Thin adapters: `CrewAI`, `LangChain`
+- Legacy integration path: `sdf_plan.integrations.*` (decomposition client, not ToolGate runtime gating)
 - Direct parser support: OpenAI-style tool calls, generic tool call JSON, PlanSpec
 - BYO adapter support: any framework that can pass `(tool_name, args, meta, run_context)` into `propose(...)`
 - Deferred official adapters: additional framework-specific variants beyond thin wrappers
+
+## Strict Mode Checklist
+
+- Set `SDF_PLAN_TOKEN_SECRET` (no fallback in non-development).
+- Pass `ctx.workspace_id` for write tools.
+- Enable `strict_args=True`.
+- Optionally set `tool_args_validator` for deep per-tool schema validation.
 
 ## Public API Stability
 

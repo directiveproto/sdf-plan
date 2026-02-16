@@ -150,6 +150,30 @@ jobs:
         run: |
           pytest -q tests/unit/test_token_security.py tests/integration/test_tool_gate_concurrency.py
 
+  phase-d-guards:
+    name: phase-d-guards
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install test deps
+        run: |
+          python -m pip install --upgrade pip
+          pip install -e .
+          pip install pytest
+
+      - name: Phase D explicit guards
+        run: |
+          pytest -q tests/unit/test_token_security.py::test_new_tokens_include_jti_claim
+          pytest -q tests/unit/test_strict_args_mode.py::test_strict_mode_requires_workspace_scope_for_write_tools
+          pytest -q tests/integration/test_legacy_and_adapter_imports.py
+
   adapter-contract:
     name: adapter-contract
     runs-on: ubuntu-latest
@@ -243,3 +267,17 @@ jobs:
         run: |
           pip install dist/*.whl
           python -c "import sdf_plan; print('sdf_plan import ok')"
+
+  release-gates:
+    name: release-gates
+    runs-on: ubuntu-latest
+    needs:
+      - contract
+      - integration
+      - cli
+      - package-smoke
+      - phase-d-guards
+    steps:
+      - name: Release gate summary
+        run: |
+          echo "Contract, integration, CLI, package smoke, and phase-d guard tests passed."

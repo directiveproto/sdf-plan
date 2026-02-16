@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import sdf_plan.gate.tool_gate as tg
 from sdf_plan import confirm, propose
+from sdf_plan._internal.token import sign_payload, verify_token
 from sdf_plan.gate.contracts import GateDecision, GateErrorCode
 
 
@@ -79,3 +80,41 @@ def test_confirm_replay_behavior_is_explicit_stateless_allow() -> None:
     assert c1.confirmed is True
     assert c2.decision == GateDecision.ALLOW
     assert c2.confirmed is True
+
+
+def test_new_tokens_include_jti_claim() -> None:
+    token = _write_token()
+    payload = verify_token(token, now_fn=tg._now)
+    assert isinstance(payload.get("jti"), str)
+    assert payload["jti"]
+
+
+def test_legacy_token_without_jti_still_verifies() -> None:
+    payload = {
+        "tool": "filesystem.write",
+        "args_hash": "abc",
+        "scope": "ws-1",
+        "idempotency_key": "idem_x",
+        "iat": 100,
+        "exp": 9999999999,
+    }
+    token = sign_payload(payload)
+    c = confirm(token)
+    assert c.decision == GateDecision.ALLOW
+    assert c.confirmed is True
+
+
+def test_propose_does_not_call_confirm_for_confirmed_token_path(monkeypatch) -> None:
+    token = _write_token(args={"path": "/tmp/a", "content": "hello"})
+
+    def _boom(*_args, **_kwargs):
+        raise AssertionError("confirm() should not be called from propose() token auto-allow path")
+
+    monkeypatch.setattr(tg, "confirm", _boom)
+    out = propose(
+        "filesystem.write",
+        {"path": "/tmp/a", "content": "hello"},
+        meta={"workspace_id": "ws-1", "confirmed_token": token},
+        run_context={"workspace_id": "ws-1"},
+    )
+    assert out.decision == GateDecision.ALLOW

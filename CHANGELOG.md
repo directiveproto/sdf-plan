@@ -1,5 +1,34 @@
 # Changelog
 
+## 0.2.8 - 2026-02-16
+
+### Added
+- Prefix/wildcard tool classification support (for example `filesystem.*`) with deterministic precedence:
+  - exact match
+  - longest prefix match
+  - unknown fallback
+- Optional strict `tool_args_validator(tool_name, args)` hook in `SdfPlanConfig`.
+- Strict hashing support for canonicalization/idempotency paths; strict mode now rejects non-JSON-native values.
+- Explicit CI guard job for:
+  - token `jti` presence
+  - strict write-scope enforcement
+  - legacy-vs-adapter import clarity smoke test
+- Release notes template for v0.2.8: `docs/releases/v0.2.8.md`.
+
+### Changed
+- `propose(...)` now threads strict-mode behavior consistently across token arg-binding and idempotency derivation.
+- Documentation refreshed across README/API/security/hardening/migration guides:
+  - replay protection with `jti` store example
+  - legacy integrations vs ToolGate adapters table
+  - strict mode rollout checklist
+
+### Migration Notes
+- Strict-mode behavior is intentionally tighter:
+  - write tools without `ctx.workspace_id` are blocked (`STRICT_SCOPE_REQUIRED`)
+  - non-JSON-native values are rejected in strict hashing paths
+  - optional `tool_args_validator` can block invalid payloads
+- This is a behavior change in strict mode only. Non-strict mode remains backward compatible.
+
 ## 0.2.7 - 2026-02-16
 
 ### Added

@@ -37,8 +37,12 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: "3.11"
-      - run: python -m pip install -U build
+      - run: python -m pip install -U build twine
       - run: python -m build
+      - run: twine check dist/*
+      - run: |
+          python -m pip install dist/*.whl
+          python -c "import sdf_plan; print('sdf_plan import ok')"
       - uses: actions/upload-artifact@v4
         with:
           name: dist

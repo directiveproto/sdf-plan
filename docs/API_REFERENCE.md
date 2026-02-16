@@ -83,6 +83,7 @@ Key fields:
 - `token_ttl`
 - `audit_hook`
 - `strict_args`
+- `tool_args_validator` (optional callable: `tool_name, args -> None | raises`)
 - `environment`
 
 ## IR and Normalization API
@@ -114,3 +115,19 @@ Thin adapters:
 BYO adapter guidance:
 - `docs/ADAPTER_TEMPLATE.md`
 
+## Legacy Integrations
+
+- `sdf_plan.integrations.langgraph.sdf_node`
+- `sdf_plan.integrations.crewai.SDFTool`
+
+These modules are legacy decomposition-client integrations. New usage should
+prefer ToolGate runtime adapters under `sdf_plan.adapters.*`.
+
+## Strict Mode Notes
+
+When strict mode is enabled (`GatePolicy.strict_mode=True` or `SdfPlanConfig(strict_args=True)`):
+
+- write tools require `ctx.workspace_id` (`STRICT_SCOPE_REQUIRED` on missing scope)
+- unknown top-level keys in `meta`/`ctx` are rejected
+- optional `tool_args_validator(tool_name, args)` runs for deep validation
+- strict hashing rejects non-JSON-native values

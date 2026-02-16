@@ -1,5 +1,13 @@
 from __future__ import annotations
 
+"""Legacy LangGraph integration (decomposition client path).
+
+Use `sdf_plan.adapters.langgraph.langgraph_tool_gate_node` for ToolGate runtime
+gating. This module is retained for backward compatibility with pre-ToolGate
+decomposition flows.
+"""
+
+import warnings
 from typing import Any, Dict, Optional
 
 from sdf_plan.client import decompose_via_api
@@ -14,7 +22,7 @@ def sdf_node(
     default_safety_mode: str = "safe",
     output_key: str = "sdf_plan",
 ) -> Any:
-    """Return a LangGraph-compatible node callable.
+    """Return a LangGraph-compatible node callable (legacy decomposition path).
 
     Input state expects:
     - goal: str (required)
@@ -23,6 +31,13 @@ def sdf_node(
     - mode: str (optional)
     - options.max_steps / options.safety_mode (optional)
     """
+    warnings.warn(
+        "sdf_plan.integrations.langgraph.sdf_node is a legacy decomposition "
+        "integration. Prefer sdf_plan.adapters.langgraph.langgraph_tool_gate_node "
+        "for ToolGate runtime gating.",
+        DeprecationWarning,
+        stacklevel=2,
+    )
 
     def node(state: Dict[str, Any]) -> Dict[str, Any]:
         goal = state.get("goal")

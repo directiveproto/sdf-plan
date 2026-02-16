@@ -27,7 +27,7 @@ def _canonicalize_map(raw: Dict[str, Any]) -> Dict[str, dict]:
         entry = ToolRiskEntry.model_validate(raw[key])
         out[norm_key] = {
             "category": entry.category,
-            "risk_flags": list(entry.risk_flags),
+            "risk_flags": sorted(set(entry.risk_flags)),
         }
     return out
 
@@ -72,6 +72,19 @@ def classify_tool(tool_name: str, risk_map: Dict[str, dict] | None = None) -> To
     table = risk_map or load_default_tool_risk_map()
     key = _normalize_tool_name(tool_name)
     raw = table.get(key)
-    if raw is None:
+    if raw is not None:
+        return ToolRiskEntry.model_validate(raw)
+
+    prefix_matches: list[tuple[int, str]] = []
+    for candidate in table.keys():
+        if not candidate.endswith(".*"):
+            continue
+        prefix = candidate[:-2]
+        if key == prefix or key.startswith(f"{prefix}."):
+            prefix_matches.append((len(prefix), candidate))
+
+    if not prefix_matches:
         return ToolRiskEntry.model_validate(UNKNOWN_TOOL_ENTRY.model_dump())
-    return ToolRiskEntry.model_validate(raw)
+
+    _, winner = sorted(prefix_matches, key=lambda item: (-item[0], item[1]))[0]
+    return ToolRiskEntry.model_validate(table[winner])
