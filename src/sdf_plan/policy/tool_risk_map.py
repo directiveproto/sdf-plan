@@ -13,6 +13,7 @@ class ToolRiskEntry(BaseModel):
 
 
 UNKNOWN_TOOL_ENTRY = ToolRiskEntry(category="unknown", risk_flags=["unknown_tool"])
+_SUPPORTED_TOOL_MAP_VERSIONS = {"v1", "v2"}
 
 
 def _normalize_tool_name(name: str) -> str:
@@ -31,14 +32,27 @@ def _canonicalize_map(raw: Dict[str, Any]) -> Dict[str, dict]:
     return out
 
 
-def load_default_tool_risk_map() -> Dict[str, dict]:
-    p = Path(__file__).with_name("default_tool_map.json")
+def _map_filename_for_version(version: str) -> str:
+    normalized = (version or "v2").strip().lower()
+    if normalized not in _SUPPORTED_TOOL_MAP_VERSIONS:
+        raise ValueError(f"unsupported tool map version: {version}")
+    if normalized == "v1":
+        return "default_tool_map.json"
+    return "tool_map_v2.json"
+
+
+def load_default_tool_risk_map(*, version: str = "v2") -> Dict[str, dict]:
+    p = Path(__file__).with_name(_map_filename_for_version(version))
     raw = json.loads(p.read_text(encoding="utf-8"))
     return _canonicalize_map(raw)
 
 
-def load_tool_risk_map(overrides: dict | str | Path | None = None) -> Dict[str, dict]:
-    merged = load_default_tool_risk_map()
+def load_tool_risk_map(
+    overrides: dict | str | Path | None = None,
+    *,
+    version: str = "v2",
+) -> Dict[str, dict]:
+    merged = load_default_tool_risk_map(version=version)
     if overrides is None:
         return merged
 

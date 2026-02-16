@@ -1,33 +1,28 @@
 from __future__ import annotations
 
-import json
 import time
-from pathlib import Path
 
-from sdf_plan.lint import lint_plan
-from sdf_plan.models import PlanSpecEnvelope
-from sdf_plan.policy import policy_annotate
+import pytest
 
-
-FIXTURE = Path(__file__).resolve().parents[1] / "fixtures" / "large_plan.json"
+from sdf_plan import propose
+from sdf_plan.gate.contracts import GateDecision
 
 
-def test_perf_budget_large_plan():
-    plan = json.loads(FIXTURE.read_text(encoding="utf-8"))
-    t0 = time.perf_counter()
-    annotated, summary = policy_annotate(plan)
-    findings = lint_plan(annotated, max_steps=100, safety_mode="safe")
-    envelope = {
-        "plan_id": "perf_large",
-        "version": "sdf.v1.2",
-        "template_key": "default",
-        "confidence": 0.8,
-        "mode_used": "deterministic",
-        "goal_spec": {"goal": "perf"},
-        "steps": annotated["steps"],
-        "lint": findings,
-        "policy_summary": summary,
-    }
-    PlanSpecEnvelope.model_validate(envelope)
-    elapsed = time.perf_counter() - t0
-    assert elapsed < 2.0
+@pytest.mark.slow
+def test_tool_gate_perf_budget_for_100_calls() -> None:
+    start = time.perf_counter()
+    decisions = []
+    for i in range(100):
+        out = propose(
+            "web.search",
+            {"q": f"query-{i}"},
+            meta={"workspace_id": "ws-1"},
+            policy={"unknown_tool": "WARN", "write_requires_confirm": False},
+            run_context={"workspace_id": "ws-1"},
+        )
+        decisions.append(out.decision)
+    elapsed = time.perf_counter() - start
+
+    assert all(d in {GateDecision.ALLOW, GateDecision.WARN} for d in decisions)
+    # Generous CI-friendly threshold to catch major regressions only.
+    assert elapsed < 3.0

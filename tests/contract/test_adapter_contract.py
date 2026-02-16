@@ -1,4 +1,4 @@
-from sdf_plan.adapters.langgraph import langgraph_tool_gate_node
+from sdf_plan.adapters import crewai_tool_gate, langchain_tool_gate, langgraph_tool_gate_node
 
 
 def test_langgraph_adapter_contract_shape_and_no_mutation() -> None:
@@ -41,3 +41,14 @@ def test_langgraph_adapter_contract_flat_keys_supported() -> None:
         }
     )
     assert out["tool_gate_decision"] in {"ALLOW", "WARN", "BLOCK"}
+
+
+def test_thin_adapter_contract_crewai_and_langchain() -> None:
+    crew_gate = crewai_tool_gate(default_ctx={"workspace_id": "ws-1"})
+    lc_gate = langchain_tool_gate(default_ctx={"workspace_id": "ws-1"})
+
+    crew = crew_gate(tool_name="filesystem.write", args={"path": "/tmp/a", "content": "x"})
+    lc = lc_gate(tool_name="filesystem.read", args={"path": "/tmp/a"})
+
+    assert crew.decision.value in {"ALLOW", "WARN", "BLOCK", "REQUIRE_CONFIRM"}
+    assert lc.decision.value in {"ALLOW", "WARN", "BLOCK", "REQUIRE_CONFIRM"}

@@ -1,16 +1,16 @@
 from __future__ import annotations
 
-import base64
-import hashlib
-import hmac
-import json
-import os
-import time
-from typing import Any, Dict
+import asyncio
+import warnings
+from typing import Any
 
+from sdf_plan._internal.policy_helpers import has_verify_context, is_write_tool
+from sdf_plan._internal.token import issue_resume_token, now_epoch_seconds, verify_token
+from sdf_plan.config import get_config
 from sdf_plan.core.hashing import hash_canonical
 from sdf_plan.gate.contracts import (
     ConfirmResponse,
+    GateContext,
     GateDecision,
     GateErrorCode,
     ToolGateResponse,
@@ -19,55 +19,10 @@ from sdf_plan.gate.idempotency import generate_idempotency_key
 from sdf_plan.lint import lint_tool_mode
 from sdf_plan.policy import GatePolicy, VerifyBeforeWriteMode, classify_tool, load_tool_risk_map
 
-_DEFAULT_TOKEN_TTL_SEC = 600
-_DEFAULT_SECRET = "sdf-plan-dev-secret"
-
-
-def _secret() -> bytes:
-    return os.getenv("SDF_PLAN_TOKEN_SECRET", _DEFAULT_SECRET).encode("utf-8")
-
 
 def _now() -> int:
-    return int(time.time())
-
-
-def _b64url(data: bytes) -> str:
-    return base64.urlsafe_b64encode(data).decode("ascii").rstrip("=")
-
-
-def _b64url_decode(text: str) -> bytes:
-    pad = "=" * ((4 - len(text) % 4) % 4)
-    return base64.urlsafe_b64decode((text + pad).encode("ascii"))
-
-
-def _sign_payload(payload: dict[str, Any]) -> str:
-    payload_json = json.dumps(payload, sort_keys=True, separators=(",", ":")).encode("utf-8")
-    payload_b64 = _b64url(payload_json)
-    sig = hmac.new(_secret(), payload_b64.encode("ascii"), hashlib.sha256).digest()
-    sig_b64 = _b64url(sig)
-    return f"{payload_b64}.{sig_b64}"
-
-
-def _verify_token(token: str) -> dict[str, Any]:
-    parts = (token or "").split(".")
-    if len(parts) != 2:
-        raise ValueError("INVALID_TOKEN")
-
-    payload_b64, sig_b64 = parts
-    expected_sig = hmac.new(_secret(), payload_b64.encode("ascii"), hashlib.sha256).digest()
-    if not hmac.compare_digest(_b64url(expected_sig), sig_b64):
-        raise ValueError("TOKEN_TAMPERED")
-
-    try:
-        payload = json.loads(_b64url_decode(payload_b64).decode("utf-8"))
-    except Exception as exc:
-        raise ValueError("INVALID_TOKEN") from exc
-
-    exp = int(payload.get("exp", 0))
-    if _now() > exp:
-        raise ValueError("TOKEN_EXPIRED")
-
-    return payload
+    # Backward-compatible shim for tests monkeypatching sdf_plan.gate.tool_gate._now.
+    return now_epoch_seconds()
 
 
 def _to_policy(policy: dict[str, Any] | GatePolicy | None) -> GatePolicy:
@@ -78,54 +33,142 @@ def _to_policy(policy: dict[str, Any] | GatePolicy | None) -> GatePolicy:
     return GatePolicy.model_validate(policy)
 
 
-def _is_write_tool(category: str, risk_flags: list[str]) -> bool:
-    if category.startswith("write"):
-        return True
-    write_like = {"write", "external_side_effect", "payment", "prod_change", "credential_access"}
-    return any(flag in write_like for flag in risk_flags)
+def _context_from_legacy(meta: dict[str, Any], run_context: dict[str, Any]) -> GateContext:
+    return GateContext(
+        workspace_id=(
+            run_context.get("workspace_id")
+            or meta.get("workspace_id")
+            or meta.get("tenant_id")
+        ),
+        user_id=run_context.get("user_id") or meta.get("user_id"),
+        session_id=run_context.get("session_id") or meta.get("session_id"),
+        metadata={},
+    )
 
 
-def _has_verify_context(run_context: dict[str, Any] | None) -> bool:
-    ctx = run_context or {}
-    if ctx.get("verified") is True:
-        return True
+def _resolve_ctx(
+    ctx: GateContext | dict[str, Any] | None,
+    *,
+    meta: dict[str, Any],
+    run_context: dict[str, Any],
+) -> GateContext:
+    if ctx is not None:
+        if isinstance(ctx, GateContext):
+            return ctx
+        return GateContext.model_validate(ctx)
 
-    actions = ctx.get("recent_actions") or []
-    for action in actions:
-        if not isinstance(action, dict):
-            continue
-        kind = str(action.get("kind") or "").lower()
-        tool_name = str(action.get("tool_name") or "").lower()
-        if kind in {"verify", "confirm"}:
-            return True
-        if "verify" in tool_name or tool_name.endswith(".read"):
-            return True
-    return False
+    if meta or run_context:
+        warnings.warn(
+            "Passing workspace/user context via `meta` or `run_context` is deprecated. "
+            "Use `ctx=GateContext(...)`.",
+            DeprecationWarning,
+            stacklevel=2,
+        )
+    return _context_from_legacy(meta, run_context)
 
 
-def _issue_resume_token(*, tool_name: str, args_hash: str, scope: Any, idempotency_key: str | None, ttl_sec: int = _DEFAULT_TOKEN_TTL_SEC) -> str:
-    payload = {
-        "tool": tool_name,
-        "args_hash": args_hash,
-        "scope": scope,
-        "idempotency_key": idempotency_key,
-        "iat": _now(),
-        "exp": _now() + int(ttl_sec),
+def _run_context_with_ctx(run_context: dict[str, Any], ctx: GateContext) -> dict[str, Any]:
+    merged = dict(run_context)
+    if ctx.workspace_id and "workspace_id" not in merged:
+        merged["workspace_id"] = ctx.workspace_id
+    if ctx.user_id and "user_id" not in merged:
+        merged["user_id"] = ctx.user_id
+    if ctx.session_id and "session_id" not in merged:
+        merged["session_id"] = ctx.session_id
+    if ctx.metadata:
+        extra = dict(merged.get("metadata") or {})
+        extra.update(ctx.metadata)
+        merged["metadata"] = extra
+    return merged
+
+
+def _emit_audit(payload: dict[str, Any]) -> None:
+    hook = get_config().audit_hook
+    if hook is None:
+        return
+    try:
+        hook(payload)
+    except Exception:
+        # Audit must never break gate execution paths.
+        return
+
+
+def _strict_error(message: str) -> ToolGateResponse:
+    return ToolGateResponse(
+        decision=GateDecision.BLOCK,
+        reason=message,
+        error_code=GateErrorCode.POLICY_BLOCKED,
+        risk_flags=[],
+        confirm_prompt=None,
+        resume=None,
+    )
+
+
+def _validate_strict_inputs(
+    *,
+    args: dict[str, Any],
+    meta: dict[str, Any],
+    ctx: GateContext,
+    raw_ctx: GateContext | dict[str, Any] | None,
+) -> str | None:
+    allowed_meta = {
+        "confirmed_token",
+        "confirm_prompt",
+        "idempotency_exclude_fields",
+        "idempotency_key",
+        "disable_auto_idempotency",
+        "workspace_id",
+        "tenant_id",
+        "user_id",
+        "session_id",
     }
-    return _sign_payload(payload)
+    unknown_meta = sorted(k for k in meta.keys() if k not in allowed_meta)
+    if unknown_meta:
+        return f"STRICT_ARGS_REJECTED: unknown meta keys: {', '.join(unknown_meta)}"
+
+    if isinstance(raw_ctx, dict):
+        allowed_ctx = {"workspace_id", "user_id", "session_id", "metadata"}
+        unknown_ctx_keys = sorted(k for k in raw_ctx.keys() if k not in allowed_ctx)
+        if unknown_ctx_keys:
+            return f"STRICT_ARGS_REJECTED: unknown ctx keys: {', '.join(unknown_ctx_keys)}"
+
+    if not isinstance(ctx.metadata, dict):
+        return "STRICT_ARGS_REJECTED: ctx.metadata must be an object"
+    unknown_ctx = []
+    for key in ctx.metadata.keys():
+        if not isinstance(key, str):
+            unknown_ctx.append(str(key))
+    if unknown_ctx:
+        return f"STRICT_ARGS_REJECTED: ctx.metadata keys must be strings: {', '.join(unknown_ctx)}"
+
+    bad_arg_keys = [str(k) for k in args.keys() if not isinstance(k, str)]
+    if bad_arg_keys:
+        return f"STRICT_ARGS_REJECTED: non-string top-level arg keys: {', '.join(bad_arg_keys)}"
+
+    return None
 
 
 def confirm(token: str, user_ok: bool = True) -> ConfirmResponse:
     if not user_ok:
-        return ConfirmResponse(
+        out = ConfirmResponse(
             decision=GateDecision.BLOCK,
             confirmed=False,
             error_code=GateErrorCode.POLICY_BLOCKED,
             reason="User denied confirmation",
         )
+        _emit_audit(
+            {
+                "event": "confirm",
+                "decision": out.decision.value,
+                "reason": out.reason,
+                "confirmed": out.confirmed,
+                "error_code": out.error_code.value if out.error_code else None,
+            }
+        )
+        return out
 
     try:
-        payload = _verify_token(token)
+        payload = verify_token(token, now_fn=_now)
     except ValueError as exc:
         code = str(exc)
         if code == "TOKEN_EXPIRED":
@@ -134,42 +177,104 @@ def confirm(token: str, user_ok: bool = True) -> ConfirmResponse:
             err = GateErrorCode.TOKEN_TAMPERED
         else:
             err = GateErrorCode.INVALID_TOKEN
-        return ConfirmResponse(
+        out = ConfirmResponse(
             decision=GateDecision.BLOCK,
             confirmed=False,
             error_code=err,
             reason=code,
         )
+        _emit_audit(
+            {
+                "event": "confirm",
+                "decision": out.decision.value,
+                "reason": out.reason,
+                "confirmed": out.confirmed,
+                "error_code": out.error_code.value if out.error_code else None,
+            }
+        )
+        return out
 
-    return ConfirmResponse(
+    out = ConfirmResponse(
         decision=GateDecision.ALLOW,
         confirmed=True,
         reason="CONFIRMED",
         idempotency_key=payload.get("idempotency_key"),
     )
+    _emit_audit(
+        {
+            "event": "confirm",
+            "decision": out.decision.value,
+            "reason": out.reason,
+            "confirmed": out.confirmed,
+            "error_code": out.error_code.value if out.error_code else None,
+            "idempotency_key": out.idempotency_key,
+        }
+    )
+    return out
 
 
 def propose(
     tool_name: str,
     args: dict[str, Any] | None = None,
+    ctx: GateContext | dict[str, Any] | None = None,
     meta: dict[str, Any] | None = None,
-    policy: dict[str, Any] | GatePolicy | None = None,
     run_context: dict[str, Any] | None = None,
+    policy: dict[str, Any] | GatePolicy | None = None,
 ) -> ToolGateResponse:
+    if (
+        isinstance(ctx, dict)
+        and meta is None
+        and run_context is None
+        and not any(k in ctx for k in {"workspace_id", "user_id", "session_id", "metadata"})
+    ):
+        warnings.warn(
+            "Passing `meta` as the third positional argument is deprecated. "
+            "Use propose(..., meta=...) or propose(..., ctx=GateContext(...)).",
+            DeprecationWarning,
+            stacklevel=2,
+        )
+        meta = dict(ctx)
+        ctx = None
+
     tool_name_norm = (tool_name or "").strip().lower()
     args_norm = dict(args or {})
     meta_norm = dict(meta or {})
     run_ctx = dict(run_context or {})
+    resolved_ctx = _resolve_ctx(ctx, meta=meta_norm, run_context=run_ctx)
+    run_ctx = _run_context_with_ctx(run_ctx, resolved_ctx)
+
+    gp = _to_policy(policy)
+    if gp.strict_mode or bool(get_config().strict_args):
+        strict_error = _validate_strict_inputs(
+            args=args_norm,
+            meta=meta_norm,
+            ctx=resolved_ctx,
+            raw_ctx=ctx,
+        )
+        if strict_error is not None:
+            out = _strict_error(strict_error)
+            _emit_audit(
+                {
+                    "event": "propose",
+                    "tool": tool_name_norm,
+                    "decision": out.decision.value,
+                    "reason": out.reason,
+                    "risk_flags": [],
+                    "idempotency_key": None,
+                    "ctx": resolved_ctx.model_dump(),
+                    "meta": meta_norm,
+                }
+            )
+            return out
 
     # 1) normalize / classify
-    gp = _to_policy(policy)
     risk_map_overrides = None
     if isinstance(policy, dict):
         risk_map_overrides = policy.get("tool_risk_map_overrides")
     risk_map = load_tool_risk_map(risk_map_overrides)
     classification = classify_tool(tool_name_norm, risk_map)
     risk_flags = list(classification.risk_flags)
-    is_write = _is_write_tool(classification.category, risk_flags)
+    is_write = is_write_tool(classification.category, risk_flags)
     is_unknown = classification.category == "unknown"
 
     # 2) lint checks
@@ -187,8 +292,7 @@ def propose(
     verify_warning = False
     verify_block = False
     if is_write and gp.verify_before_write != VerifyBeforeWriteMode.OFF:
-        has_verify = _has_verify_context(run_ctx)
-        if not has_verify:
+        if not has_verify_context(run_ctx):
             if gp.verify_before_write == VerifyBeforeWriteMode.WARN:
                 verify_warning = True
             elif gp.verify_before_write == VerifyBeforeWriteMode.ENFORCE:
@@ -218,12 +322,17 @@ def propose(
         c = confirm(str(confirmed_token), user_ok=True)
         if c.confirmed:
             args_h = hash_canonical(args_norm)
-            expected_scope = run_ctx.get("workspace_id") or meta_norm.get("workspace_id")
+            expected_scope = resolved_ctx.workspace_id
             try:
-                payload = _verify_token(str(confirmed_token))
+                payload = verify_token(str(confirmed_token), now_fn=_now)
             except ValueError:
                 payload = None
-            if payload and payload.get("tool") == tool_name_norm and payload.get("args_hash") == args_h and payload.get("scope") == expected_scope:
+            if (
+                payload
+                and payload.get("tool") == tool_name_norm
+                and payload.get("args_hash") == args_h
+                and payload.get("scope") == expected_scope
+            ):
                 requires_confirm = False
                 policy_block = False
                 verify_warning = False
@@ -232,7 +341,7 @@ def propose(
     # 4) idempotency checks
     idempotency_key = None
     if is_write and gp.require_idempotency_for_write:
-        scope = run_ctx.get("workspace_id") or meta_norm.get("workspace_id") or "global"
+        scope = resolved_ctx.workspace_id or "global"
         exclude_fields = meta_norm.get("idempotency_exclude_fields") or []
         idempotency_key = generate_idempotency_key(
             scope=scope,
@@ -255,7 +364,7 @@ def propose(
             reason = "NO_VERIFY_BEFORE_WRITE"
         elif is_unknown:
             reason = "UNKNOWN_TOOL"
-        return ToolGateResponse(
+        out = ToolGateResponse(
             decision=GateDecision.BLOCK,
             reason=reason,
             error_code=GateErrorCode.POLICY_BLOCKED,
@@ -263,38 +372,113 @@ def propose(
             confirm_prompt=None,
             resume=None,
         )
+        _emit_audit(
+            {
+                "event": "propose",
+                "tool": tool_name_norm,
+                "decision": out.decision.value,
+                "reason": out.reason,
+                "risk_flags": list(risk_flags),
+                "idempotency_key": None,
+                "ctx": resolved_ctx.model_dump(),
+                "meta": meta_norm,
+            }
+        )
+        return out
 
     if requires_confirm:
         args_h = hash_canonical(args_norm)
-        scope = run_ctx.get("workspace_id") or meta_norm.get("workspace_id")
-        token = _issue_resume_token(
+        token = issue_resume_token(
             tool_name=tool_name_norm,
             args_hash=args_h,
-            scope=scope,
+            scope=resolved_ctx.workspace_id,
             idempotency_key=idempotency_key,
+            now_fn=_now,
         )
         prompt = meta_norm.get("confirm_prompt") or "Confirm before executing side-effecting action"
-        return ToolGateResponse(
+        out = ToolGateResponse(
             decision=GateDecision.REQUIRE_CONFIRM,
             reason="WRITE_REQUIRES_CONFIRM" if is_write else (lint_reason or "REQUIRES_CONFIRM"),
             risk_flags=risk_flags,
             confirm_prompt=str(prompt),
             resume={"token": token, "idempotency_key": idempotency_key},
         )
+        _emit_audit(
+            {
+                "event": "propose",
+                "tool": tool_name_norm,
+                "decision": out.decision.value,
+                "reason": out.reason,
+                "risk_flags": list(risk_flags),
+                "idempotency_key": idempotency_key,
+                "ctx": resolved_ctx.model_dump(),
+                "meta": meta_norm,
+            }
+        )
+        return out
 
     if verify_warning:
-        return ToolGateResponse(
+        out = ToolGateResponse(
             decision=GateDecision.WARN,
             reason="NO_VERIFY_BEFORE_WRITE",
             risk_flags=risk_flags,
             confirm_prompt=None,
             resume={"token": None, "idempotency_key": idempotency_key},
         )
+        _emit_audit(
+            {
+                "event": "propose",
+                "tool": tool_name_norm,
+                "decision": out.decision.value,
+                "reason": out.reason,
+                "risk_flags": list(risk_flags),
+                "idempotency_key": idempotency_key,
+                "ctx": resolved_ctx.model_dump(),
+                "meta": meta_norm,
+            }
+        )
+        return out
 
-    return ToolGateResponse(
+    out = ToolGateResponse(
         decision=GateDecision.ALLOW,
         reason=lint_reason,
         risk_flags=risk_flags,
         confirm_prompt=None,
         resume={"token": None, "idempotency_key": idempotency_key},
     )
+    _emit_audit(
+        {
+            "event": "propose",
+            "tool": tool_name_norm,
+            "decision": out.decision.value,
+            "reason": out.reason,
+            "risk_flags": list(risk_flags),
+            "idempotency_key": idempotency_key,
+            "ctx": resolved_ctx.model_dump(),
+            "meta": meta_norm,
+        }
+    )
+    return out
+
+
+async def apropose(
+    tool_name: str,
+    args: dict[str, Any] | None = None,
+    ctx: GateContext | dict[str, Any] | None = None,
+    meta: dict[str, Any] | None = None,
+    run_context: dict[str, Any] | None = None,
+    policy: dict[str, Any] | GatePolicy | None = None,
+) -> ToolGateResponse:
+    return await asyncio.to_thread(
+        propose,
+        tool_name,
+        args,
+        ctx,
+        meta,
+        run_context,
+        policy,
+    )
+
+
+async def aconfirm(token: str, user_ok: bool = True) -> ConfirmResponse:
+    return await asyncio.to_thread(confirm, token, user_ok)

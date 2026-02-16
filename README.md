@@ -10,13 +10,13 @@ Tool safety gates for agent workflows.
 ## 30-Second Quickstart (ToolGate-first)
 
 ```python
-from sdf_plan import confirm, propose
+from sdf_plan import GateContext, confirm, propose
 
+ctx = GateContext(workspace_id="demo-ws")
 first = propose(
     tool_name="filesystem.write",
     args={"path": "/tmp/demo.txt", "content": "hello"},
-    meta={"workspace_id": "demo-ws"},
-    run_context={"workspace_id": "demo-ws"},
+    ctx=ctx,
 )
 print(first.decision.value)  # REQUIRE_CONFIRM
 
@@ -26,8 +26,8 @@ _ = confirm(token, user_ok=True)
 second = propose(
     tool_name="filesystem.write",
     args={"path": "/tmp/demo.txt", "content": "hello"},
-    meta={"workspace_id": "demo-ws", "confirmed_token": token},
-    run_context={"workspace_id": "demo-ws"},
+    ctx=ctx,
+    meta={"confirmed_token": token},
 )
 print(second.decision.value)  # ALLOW
 ```
@@ -48,6 +48,13 @@ python examples/tool_gate_openai_input.py
 python examples/plan_mode_preflight.py
 ```
 
+## CLI
+
+```bash
+sdf-plan lint path/to/plan.json
+sdf-plan classify --tool filesystem.write
+```
+
 ## What You Get
 
 - ToolGate runtime decisions (`ALLOW | REQUIRE_CONFIRM | WARN | BLOCK`)
@@ -60,9 +67,10 @@ python examples/plan_mode_preflight.py
 ## Support Matrix (v0.2.0)
 
 - Official maintained adapter: `LangGraph`
+- Thin adapters: `CrewAI`, `LangChain`
 - Direct parser support: OpenAI-style tool calls, generic tool call JSON, PlanSpec
 - BYO adapter support: any framework that can pass `(tool_name, args, meta, run_context)` into `propose(...)`
-- Deferred official adapters: LangChain, CrewAI (v0.2.1+)
+- Deferred official adapters: additional framework-specific variants beyond thin wrappers
 
 ## Public API Stability
 
@@ -107,6 +115,8 @@ preflight_lint(plan, max_steps=12, safety_mode="safe")
 - `docs/API_REFERENCE.md`
 - `docs/ARCHITECTURE.md`
 - `docs/SECURITY_MODEL.md`
+- `docs/MIGRATION_PLANSPEC_TO_TOOLGATE.md`
+- `docs/PRODUCTION_HARDENING.md`
 - `docs/ADAPTER_TEMPLATE.md`
 - `docs/POLICY_TUNING.md`
 - `docs/TOOL_CLASSIFICATION.md`
@@ -127,8 +137,7 @@ preflight_lint(plan, max_steps=12, safety_mode="safe")
 Install dev/test dependencies:
 
 ```bash
-pip install -e .
-pip install pytest pytest-cov build twine
+pip install -e ".[dev]"
 ```
 
 Fast local checks (matches PR path):

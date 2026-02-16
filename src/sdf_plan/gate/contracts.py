@@ -20,9 +20,17 @@ class GateErrorCode(str, Enum):
     POLICY_BLOCKED = "POLICY_BLOCKED"
 
 
+class GateContext(BaseModel):
+    workspace_id: Optional[str] = None
+    user_id: Optional[str] = None
+    session_id: Optional[str] = None
+    metadata: Dict[str, Any] = Field(default_factory=dict)
+
+
 class ToolGateRequest(BaseModel):
     tool_name: str = Field(min_length=1)
     args: Dict[str, Any] = Field(default_factory=dict)
+    ctx: Optional[GateContext] = None
     meta: Dict[str, Any] = Field(default_factory=dict)
     policy: Optional[Dict[str, Any]] = None
     run_context: Optional[Dict[str, Any]] = None

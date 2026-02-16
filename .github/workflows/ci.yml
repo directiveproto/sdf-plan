@@ -3,10 +3,13 @@ name: ci
 on:
   pull_request:
   push:
+  schedule:
+    - cron: "0 4 * * *"
+  workflow_dispatch:
 
 jobs:
   unit:
-    name: unit (coverage gate)
+    name: unit
     runs-on: ubuntu-latest
     strategy:
       matrix:
@@ -26,8 +29,47 @@ jobs:
           pip install -e .
           pip install pytest pytest-cov
 
-      - name: Unit tests + coverage threshold
-        run: pytest -q --cov=sdf_plan --cov-report=term-missing --cov-fail-under=70 tests/contract/test_gate_contract.py tests/contract/test_adapter_contract.py tests/unit tests/integration tests/compat/test_planspec_roundtrip_best_effort.py
+      - name: Unit tests
+        run: |
+          pytest -q -m "not slow" tests/unit
+
+  coverage-gates:
+    name: coverage-gates
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install test deps
+        run: |
+          python -m pip install --upgrade pip
+          pip install -e .
+          pip install pytest pytest-cov
+
+      - name: Global coverage gate
+        run: |
+          pytest -q \
+            --cov=sdf_plan \
+            --cov-report=term-missing \
+            --cov-fail-under=70 \
+            tests/unit tests/integration
+
+      - name: Gate module coverage
+        run: |
+          pytest -q --cov=sdf_plan.gate --cov-fail-under=70 tests/unit tests/integration
+
+      - name: Policy module coverage
+        run: |
+          pytest -q --cov=sdf_plan.policy --cov-fail-under=70 tests/unit tests/integration
+
+      - name: Inputs module coverage
+        run: |
+          pytest -q --cov=sdf_plan.inputs --cov-fail-under=70 tests/unit tests/integration
 
   contract:
     name: contract (schema freeze)
@@ -54,7 +96,7 @@ jobs:
 
       - name: Contract tests (snapshot checks)
         run: |
-          pytest -q tests/contract/test_gate_contract.py
+          pytest -q tests/contract/test_gate_contract.py tests/contract/test_adapter_contract.py
 
   integration:
     name: integration
@@ -75,7 +117,38 @@ jobs:
           pip install pytest
 
       - name: Integration tests
-        run: pytest -q tests/integration/test_openai_variants_normalization.py tests/integration/test_generic_toolcall_normalization.py tests/integration/test_planspec_to_ir.py tests/integration/test_tool_gate_flow.py tests/integration/test_plan_and_tool_mode_coexist.py tests/compat/test_planspec_roundtrip_best_effort.py
+        run: |
+          pytest -q \
+            -m "not slow" \
+            tests/integration/test_openai_variants_normalization.py \
+            tests/integration/test_generic_toolcall_normalization.py \
+            tests/integration/test_planspec_to_ir.py \
+            tests/integration/test_tool_gate_flow.py \
+            tests/integration/test_tool_gate_concurrency.py \
+            tests/integration/test_plan_and_tool_mode_coexist.py \
+            tests/compat/test_planspec_roundtrip_best_effort.py
+
+  security:
+    name: security
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install test deps
+        run: |
+          python -m pip install --upgrade pip
+          pip install -e .
+          pip install pytest
+
+      - name: Security tests
+        run: |
+          pytest -q tests/unit/test_token_security.py tests/integration/test_tool_gate_concurrency.py
 
   adapter-contract:
     name: adapter-contract
@@ -96,7 +169,56 @@ jobs:
           pip install pytest
 
       - name: Adapter contract and integration tests
-        run: pytest -q tests/contract/test_adapter_contract.py tests/integration/test_langgraph_adapter.py
+        run: |
+          pytest -q \
+            tests/contract/test_adapter_contract.py \
+            tests/integration/test_langgraph_adapter.py
+
+  cli:
+    name: cli
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install deps
+        run: |
+          python -m pip install --upgrade pip
+          pip install -e .
+          pip install pytest
+
+      - name: CLI tests
+        run: |
+          pytest -q tests/cli/test_cli.py
+          python -m sdf_plan --help
+
+  full-slow:
+    name: full-slow
+    if: github.event_name == 'schedule' || github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install test deps
+        run: |
+          python -m pip install --upgrade pip
+          pip install -e .
+          pip install pytest
+
+      - name: Slow/fuzz/perf tests
+        run: |
+          pytest -q -m slow tests/integration/test_fuzz_inputs.py tests/integration/test_perf_budget.py
 
   package-smoke:
     name: package-smoke

@@ -20,21 +20,6 @@ def _load_snapshot(name: str) -> dict:
         return json.load(f)
 
 
-def _normalize_schema(obj):
-    # Pydantic patch versions may add explicit additionalProperties=true for plain objects.
-    # Treat that as schema-equivalent to omitted additionalProperties in snapshots.
-    if isinstance(obj, dict):
-        normalized = {}
-        for k, v in obj.items():
-            if k == "additionalProperties" and v is True:
-                continue
-            normalized[k] = _normalize_schema(v)
-        return normalized
-    if isinstance(obj, list):
-        return [_normalize_schema(v) for v in obj]
-    return obj
-
-
 def test_gate_decision_enum_is_stable() -> None:
     assert [e.value for e in GateDecision] == [
         "ALLOW",
@@ -54,14 +39,14 @@ def test_gate_error_codes_are_stable() -> None:
 
 
 def test_tool_gate_request_schema_snapshot() -> None:
-    actual = _normalize_schema(ToolGateRequest.model_json_schema())
-    expected = _normalize_schema(_load_snapshot("tool_gate_request.schema.json"))
+    actual = ToolGateRequest.model_json_schema()
+    expected = _load_snapshot("tool_gate_request.schema.json")
     assert actual == expected
 
 
 def test_tool_gate_response_schema_snapshot() -> None:
-    actual = _normalize_schema(ToolGateResponse.model_json_schema())
-    expected = _normalize_schema(_load_snapshot("tool_gate_response.schema.json"))
+    actual = ToolGateResponse.model_json_schema()
+    expected = _load_snapshot("tool_gate_response.schema.json")
     assert actual == expected
 
 

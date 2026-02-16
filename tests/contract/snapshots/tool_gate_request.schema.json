@@ -1,16 +1,79 @@
 {
+  "$defs": {
+    "GateContext": {
+      "properties": {
+        "metadata": {
+          "additionalProperties": true,
+          "title": "Metadata",
+          "type": "object"
+        },
+        "session_id": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Session Id"
+        },
+        "user_id": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "User Id"
+        },
+        "workspace_id": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Workspace Id"
+        }
+      },
+      "title": "GateContext",
+      "type": "object"
+    }
+  },
   "properties": {
     "args": {
+      "additionalProperties": true,
       "title": "Args",
       "type": "object"
     },
+    "ctx": {
+      "anyOf": [
+        {
+          "$ref": "#/$defs/GateContext"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null
+    },
     "meta": {
+      "additionalProperties": true,
       "title": "Meta",
       "type": "object"
     },
     "policy": {
       "anyOf": [
         {
+          "additionalProperties": true,
           "type": "object"
         },
         {
@@ -23,6 +86,7 @@
     "run_context": {
       "anyOf": [
         {
+          "additionalProperties": true,
           "type": "object"
         },
         {

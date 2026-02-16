@@ -1,48 +1,52 @@
 # Changelog
 
+## 0.2.7 - 2026-02-16
+
+### Added
+- Internal shared helper modules to eliminate duplicated gate/lint/policy logic:
+  - `_internal/policy_helpers.py`
+  - `_internal/token.py`
+  - `_internal/hashing.py`
+- Config API:
+  - `SdfPlanConfig`
+  - `configure(...)`
+  - environment-aware secret handling with non-development fail-fast behavior.
+- First-class `GateContext` and canonical `propose(..., ctx=...)` usage.
+- Async gate APIs:
+  - `apropose(...)`
+  - `aconfirm(...)`
+- Tool map v2 support and versioned loader:
+  - `load_default_tool_risk_map(version=...)`
+  - `load_tool_risk_map(..., version=...)`
+- Audit hook support on `propose/confirm`.
+- Minimal CLI:
+  - `sdf-plan lint <plan.json>`
+  - `sdf-plan classify --tool <name>`
+- Thin adapter wrappers:
+  - `crewai_tool_gate`
+  - `langchain_tool_gate`
+- New docs:
+  - `docs/MIGRATION_PLANSPEC_TO_TOOLGATE.md`
+  - `docs/PRODUCTION_HARDENING.md`
+
+### Changed
+- README quickstart now uses `GateContext`-first canonical flow.
+- API reference updated for `ctx`, async APIs, config API, and map versioning.
+- CI/release workflows now include CLI tests.
+
 ## 0.2.6 - 2026-02-15
 
 ### Fixed
 - Updated build backend requirement to setuptools>=77 so sdist names are generated in canonical form (sdf_plan-*.tar.gz) accepted by PyPI.
 - Resolves repeated PyPI 400 failures caused by invalid/non-canonical sdist filename format.
+
 ## 0.2.5 - 2026-02-15
 
 ### Fixed
 - PyPI release workflow now uses skip-existing: true in publish step to make reruns idempotent when one artifact from the same version already exists.
 - Prevents false release failures caused by partial prior uploads.
+
 ## 0.2.4 - 2026-02-15
-
-### Fixed
-- Stabilized contract schema snapshots across Pydantic patch differences by
-  normalizing explicit `additionalProperties: true` entries before comparison
-  in `tests/contract/test_gate_contract.py`.
-- This resolves CI/release failures in `contract` and `unit` jobs on Linux.
-
-## 0.2.3 - 2026-02-15
-
-### Fixed
-- GitHub Actions command formatting hardened for cross-platform line endings:
-  replaced multiline `pytest` backslash continuations with single-line commands
-  in `.github/workflows/ci.yml` and `.github/workflows/release.yml`.
-- This fixes false CI/release failures caused by CRLF + shell continuation parsing.
-
-## 0.2.2 - 2026-02-15
-
-### Fixed
-- Restored backward-compat lint utility exports from `sdf_plan.lint`:
-  - `_has_cycle`
-  - `_looks_like_external_write`
-  - `_unverifiable_stop_condition`
-- CI coverage gate now measures representative contract/unit/integration/compat suites
-  against package-wide coverage threshold to avoid false failures.
-
-## 0.2.1 - 2026-02-15
-
-### Changed
-- Release hygiene follow-up after `0.2.0`:
-  - removed accidentally tracked local virtualenv artifacts from repository history tip
-  - tightened ignore rules for local venv and bytecode artifacts
-- No API or behavior changes from `0.2.0`.
 
 ## 0.2.0 - 2026-02-15
 

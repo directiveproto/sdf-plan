@@ -2,27 +2,7 @@ from __future__ import annotations
 
 from typing import Any, Dict, List, Tuple
 
-
-WRITE_KEYWORDS = (
-    "send",
-    "email",
-    "post",
-    "tweet",
-    "publish",
-    "charge",
-    "pay",
-    "buy",
-    "book",
-    "reservation",
-    "delete",
-    "remove",
-    "update",
-    "write",
-    "commit",
-    "submit",
-    "upload",
-    "transfer",
-)
+from sdf_plan._internal.policy_helpers import looks_like_write_intent
 
 
 def policy_annotate(plan: Dict[str, Any]) -> Tuple[Dict[str, Any], Dict[str, int]]:
@@ -32,7 +12,7 @@ def policy_annotate(plan: Dict[str, Any]) -> Tuple[Dict[str, Any], Dict[str, int
 
     for step in steps:
         intent = (step.get("intent") or "").lower()
-        is_write = step.get("type") == "ACT" and any(k in intent for k in WRITE_KEYWORDS)
+        is_write = step.get("type") == "ACT" and looks_like_write_intent(intent)
 
         risk_flags: List[str] = []
         if is_write:

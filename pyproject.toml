@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "sdf-plan"
-version = "0.2.6"
+version = "0.2.7"
 description = "PlanSpec + lint + safety gates for agent plans."
 readme = "README.md"
 requires-python = ">=3.10"
@@ -19,9 +19,22 @@ classifiers = [
 ]
 
 [project.urls]
-Homepage = "https://github.com/directiveproto/sdf-plangate-demo"
+Homepage = "https://github.com/directiveproto/sdf-plan"
 Source = "https://github.com/directiveproto/sdf-plan"
 Issues = "https://github.com/directiveproto/sdf-plan/issues"
+
+[project.optional-dependencies]
+dev = [
+  "ruff>=0.8.0",
+  "mypy>=1.11.0",
+  "pytest>=8.0.0",
+  "pytest-cov>=5.0.0",
+  "build>=1.2.0",
+  "twine>=5.0.0",
+]
+
+[project.scripts]
+sdf-plan = "sdf_plan.cli:main"
 
 [tool.setuptools]
 package-dir = {"" = "src"}
@@ -30,4 +43,4 @@ package-dir = {"" = "src"}
 where = ["src"]
 
 [tool.setuptools.package-data]
-"sdf_plan.policy" = ["default_tool_map.json"]
+"sdf_plan.policy" = ["default_tool_map.json", "tool_map_v2.json"]

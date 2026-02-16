@@ -3,6 +3,7 @@ from __future__ import annotations
 from copy import deepcopy
 from typing import Any, Dict
 
+from sdf_plan.gate.contracts import GateContext
 from sdf_plan.gate.tool_gate import propose
 
 
@@ -27,6 +28,31 @@ def _extract_tool_inputs(
     meta = state.get(meta_key) or {}
     run_context = state.get(run_context_key)
     return str(tool_name or ""), dict(args or {}), dict(meta or {}), run_context
+
+
+def _extract_ctx(
+    state: Dict[str, Any],
+    *,
+    meta: dict[str, Any],
+    run_context: dict[str, Any] | None,
+) -> GateContext | None:
+    ctx_obj = state.get("ctx")
+    if isinstance(ctx_obj, GateContext):
+        return ctx_obj
+    if isinstance(ctx_obj, dict):
+        return GateContext.model_validate(ctx_obj)
+    if not meta and not isinstance(run_context, dict):
+        return None
+    return GateContext(
+        workspace_id=(
+            (run_context or {}).get("workspace_id")
+            or meta.get("workspace_id")
+            or meta.get("tenant_id")
+        ),
+        user_id=(run_context or {}).get("user_id") or meta.get("user_id"),
+        session_id=(run_context or {}).get("session_id") or meta.get("session_id"),
+        metadata={},
+    )
 
 
 def langgraph_tool_gate_node(
@@ -63,10 +89,17 @@ def langgraph_tool_gate_node(
         if not tool_name:
             raise ValueError("tool_name is required")
 
+        ctx = _extract_ctx(
+            state,
+            meta=meta,
+            run_context=run_context if isinstance(run_context, dict) else None,
+        )
+
         # Defensive copy so wrapper never mutates caller state.
         decision = propose(
             tool_name=tool_name,
             args=deepcopy(args),
+            ctx=deepcopy(ctx) if isinstance(ctx, GateContext) else ctx,
             meta=deepcopy(meta),
             policy=policy,
             run_context=deepcopy(run_context) if isinstance(run_context, dict) else run_context,
