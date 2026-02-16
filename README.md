@@ -2,6 +2,11 @@
 
 Tool safety gates for agent workflows.
 
+[![CI](https://github.com/directiveproto/sdf-plan/actions/workflows/ci.yml/badge.svg?branch=main)](https://github.com/directiveproto/sdf-plan/actions/workflows/ci.yml)
+[![PyPI version](https://img.shields.io/pypi/v/sdf-plan.svg)](https://pypi.org/project/sdf-plan/)
+[![Python versions](https://img.shields.io/pypi/pyversions/sdf-plan.svg)](https://pypi.org/project/sdf-plan/)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
+
 ## 30-Second Quickstart (ToolGate-first)
 
 ```python
@@ -59,6 +64,16 @@ python examples/plan_mode_preflight.py
 - BYO adapter support: any framework that can pass `(tool_name, args, meta, run_context)` into `propose(...)`
 - Deferred official adapters: LangChain, CrewAI (v0.2.1+)
 
+## Public API Stability
+
+Top-level imports are a stable facade:
+
+```python
+from sdf_plan import propose, confirm
+```
+
+The facade remains stable while internals evolve; core logic stays in `sdf_plan/gate`, not in `__init__.py`.
+
 ## Optional PlanSpec Mode
 
 Plan mode remains supported for existing users.
@@ -96,6 +111,7 @@ preflight_lint(plan, max_steps=12, safety_mode="safe")
 - `docs/POLICY_TUNING.md`
 - `docs/TOOL_CLASSIFICATION.md`
 - `docs/COMPATIBILITY.md`
+- `docs/RELEASING.md`
 
 ## Examples
 
@@ -157,6 +173,13 @@ from sdf_plan.compat import assert_schema_compat, package_version
 
 assert_schema_compat(package_version(), "schema_hash_from_/v1/schema")
 ```
+
+## Releases
+
+- Git tags use `vX.Y.Z` format.
+- GitHub Releases notes mirror `CHANGELOG.md`.
+- PyPI releases are published from tagged workflow runs.
+- See `docs/RELEASING.md` for the exact process.
 
 ## License
 
