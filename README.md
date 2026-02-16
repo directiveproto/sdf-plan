@@ -3,7 +3,7 @@
 Tool safety gates for agent workflows.
 
 [![CI](https://github.com/directiveproto/sdf-plan/actions/workflows/ci.yml/badge.svg?branch=main)](https://github.com/directiveproto/sdf-plan/actions/workflows/ci.yml)
-[![PyPI version](https://img.shields.io/pypi/v/sdf-plan.svg)](https://pypi.org/project/sdf-plan/)
+[![PyPI version](https://img.shields.io/pypi/v/sdf-plan?label=PyPI&cacheSeconds=60)](https://pypi.org/project/sdf-plan/)
 [![Python versions](https://img.shields.io/pypi/pyversions/sdf-plan.svg)](https://pypi.org/project/sdf-plan/)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 
@@ -62,9 +62,9 @@ sdf-plan classify --tool filesystem.write
 - Idempotency key derivation from scope + tool + canonical args
 - Tool-mode lint rules + policy defaults
 - PlanSpec lint and preflight (optional mode)
-- LangGraph adapter (official thin wrapper for v0.2.0)
+- LangGraph adapter (official thin wrapper for v0.2.7)
 
-## Support Matrix (v0.2.0)
+## Support Matrix (v0.2.7)
 
 - Official maintained adapter: `LangGraph`
 - Thin adapters: `CrewAI`, `LangChain`
