@@ -15,7 +15,7 @@
 4. Linting:
 - Tool-mode and plan-mode lint checks (`sdf_plan.lint`)
 5. Gate decision:
-- `propose(...)` returns `ALLOW | WARN | BLOCK` + optional resume token (`sdf_plan.gate`)
+- `propose(...)` returns `ALLOW | REQUIRE_CONFIRM | WARN | BLOCK` (`sdf_plan.gate`)
 6. Confirmation:
 - `confirm(...)` verifies token and enables deterministic continuation (`sdf_plan.gate`)
 

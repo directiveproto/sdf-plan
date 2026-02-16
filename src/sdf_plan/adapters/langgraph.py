@@ -74,7 +74,7 @@ def langgraph_tool_gate_node(
 
         decision_dict = decision.model_dump()
         interrupt = bool(
-            decision.decision.value == "BLOCK"
+            decision.decision.value in {"REQUIRE_CONFIRM", "BLOCK"}
             and decision.resume is not None
             and bool(decision.resume.token)
         )

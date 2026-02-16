@@ -10,7 +10,7 @@ def test_block_confirm_allow_flow() -> None:
         meta={"workspace_id": "ws-1"},
         run_context={"workspace_id": "ws-1"},
     )
-    assert first.decision == GateDecision.BLOCK
+    assert first.decision == GateDecision.REQUIRE_CONFIRM
     assert first.resume is not None
     assert first.resume.token
     assert first.resume.idempotency_key
@@ -31,7 +31,7 @@ def test_block_confirm_allow_flow() -> None:
 
 def test_unknown_tool_default_path_blocks_with_confirm_prompt() -> None:
     out = propose("totally.unknown.tool", {"x": 1})
-    assert out.decision == GateDecision.BLOCK
+    assert out.decision == GateDecision.REQUIRE_CONFIRM
     assert out.reason in {"UNKNOWN_TOOL", "REQUIRES_CONFIRM"}
     assert out.resume is not None
     assert out.resume.token is not None

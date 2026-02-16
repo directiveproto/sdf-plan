@@ -2,7 +2,7 @@ from sdf_plan import confirm
 from sdf_plan.adapters.langgraph import langgraph_tool_gate_node
 
 
-def test_langgraph_adapter_blocks_write_and_interrupts_for_confirm() -> None:
+def test_langgraph_adapter_requires_confirm_for_write_and_interrupts() -> None:
     node = langgraph_tool_gate_node()
     out = node(
         {
@@ -15,7 +15,7 @@ def test_langgraph_adapter_blocks_write_and_interrupts_for_confirm() -> None:
         }
     )
 
-    assert out["tool_gate_decision"] == "BLOCK"
+    assert out["tool_gate_decision"] == "REQUIRE_CONFIRM"
     assert out["tool_gate_interrupt"] is True
     token = out["tool_gate"]["resume"]["token"]
     assert isinstance(token, str) and token

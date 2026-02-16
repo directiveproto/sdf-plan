@@ -275,9 +275,8 @@ def propose(
         )
         prompt = meta_norm.get("confirm_prompt") or "Confirm before executing side-effecting action"
         return ToolGateResponse(
-            decision=GateDecision.BLOCK,
+            decision=GateDecision.REQUIRE_CONFIRM,
             reason="WRITE_REQUIRES_CONFIRM" if is_write else (lint_reason or "REQUIRES_CONFIRM"),
-            error_code=GateErrorCode.POLICY_BLOCKED,
             risk_flags=risk_flags,
             confirm_prompt=str(prompt),
             resume={"token": token, "idempotency_key": idempotency_key},

@@ -17,11 +17,11 @@ Behavior summary:
 - Runs tool-mode lint checks.
 - Applies policy defaults/overrides.
 - Derives idempotency key for write-like tools when enabled.
-- Returns one of: `ALLOW`, `WARN`, or `BLOCK` (confirm-required currently returns `BLOCK` with `resume.token`).
+- Returns one of: `ALLOW`, `REQUIRE_CONFIRM`, `WARN`, or `BLOCK`.
 
 ### `confirm(token, user_ok=True)`
 
-Confirms a previously blocked action.
+Confirms a previously confirm-gated action.
 
 - Module: `sdf_plan.gate.tool_gate`
 - Re-export: `from sdf_plan import confirm`

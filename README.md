@@ -13,7 +13,7 @@ first = propose(
     meta={"workspace_id": "demo-ws"},
     run_context={"workspace_id": "demo-ws"},
 )
-print(first.decision.value)  # BLOCK
+print(first.decision.value)  # REQUIRE_CONFIRM
 
 token = first.resume.token
 _ = confirm(token, user_ok=True)
@@ -27,7 +27,7 @@ second = propose(
 print(second.decision.value)  # ALLOW
 ```
 
-Expected flow: `BLOCKED -> CONFIRM -> CONTINUE`
+Expected flow: `REQUIRE_CONFIRM -> CONFIRM -> ALLOW`
 
 ## Install
 
@@ -45,7 +45,7 @@ python examples/plan_mode_preflight.py
 
 ## What You Get
 
-- ToolGate runtime decisions (`ALLOW | WARN | BLOCK`)
+- ToolGate runtime decisions (`ALLOW | REQUIRE_CONFIRM | WARN | BLOCK`)
 - Signed confirmation tokens + resume flow
 - Idempotency key derivation from scope + tool + canonical args
 - Tool-mode lint rules + policy defaults
