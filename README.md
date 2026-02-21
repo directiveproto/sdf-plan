@@ -1,3 +1,7 @@
+<p align="center">
+  <img src="docs/assets/logo.jpg" alt="SDF logo" width="120" />
+</p>
+
 # sdf-plan
 
 Tool safety gates for agent workflows.
