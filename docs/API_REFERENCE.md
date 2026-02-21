@@ -1,92 +1,166 @@
 # API Reference
 
-This document describes the stable public API for `sdf-plan` v0.2.x.
+This document defines the stable public API for `sdf-plan` v0.2.x.
 
-## Core ToolGate API
+## Public Surface (Stable)
 
-### `propose(tool_name, args=None, ctx=None, meta=None, run_context=None, policy=None)`
+Primary imports:
 
-Runtime gate check for a proposed tool execution.
+```python
+from sdf_plan import (
+    propose,
+    confirm,
+    apropose,
+    aconfirm,
+    configure,
+    SdfPlanConfig,
+    GateContext,
+)
+```
 
-- Module: `sdf_plan.gate.tool_gate`
-- Re-export: `from sdf_plan import propose`
-- Returns: `ToolGateResponse`
+Compatibility note:
+- Top-level facade (`sdf_plan.__init__`) is stable.
+- Internal modules may move, but behavior and contracts remain compatible within minor versions.
 
-Behavior summary:
-- Classifies tool and risk.
-- Runs tool-mode lint checks.
-- Applies policy defaults/overrides.
-- Derives idempotency key for write-like tools when enabled.
-- Supports first-class `GateContext` (`workspace_id`, `user_id`, `session_id`, `metadata`).
-- Returns one of: `ALLOW`, `REQUIRE_CONFIRM`, `WARN`, or `BLOCK`.
+## Decisions and Errors
 
-### `confirm(token, user_ok=True)`
+Decision vocabulary:
+- `ALLOW`
+- `REQUIRE_CONFIRM`
+- `WARN`
+- `BLOCK`
 
-Confirms a previously confirm-gated action.
+Core error codes:
+- `INVALID_TOKEN`
+- `TOKEN_EXPIRED`
+- `TOKEN_TAMPERED`
+- `POLICY_BLOCKED`
 
-- Module: `sdf_plan.gate.tool_gate`
-- Re-export: `from sdf_plan import confirm`
-- Returns: `ConfirmResponse`
+Cloud extensions may add stricter codes (for example replay/scope codes).
 
-Behavior summary:
-- Verifies token signature and expiry.
-- If valid and `user_ok=True`, returns `ALLOW` with `confirmed=True`.
-- If invalid/expired/tampered, returns `BLOCK` with error code.
+## ToolGate API
 
-### `apropose(...)` and `aconfirm(...)`
+### `propose(...)`
 
-Async wrappers over sync gate primitives.
+```python
+propose(
+    tool_name: str,
+    args: dict | None = None,
+    ctx: GateContext | None = None,
+    meta: dict | None = None,
+    run_context: dict | None = None,
+    policy: dict | GatePolicy | None = None,
+) -> ToolGateResponse
+```
 
-- Module: `sdf_plan.gate.tool_gate`
-- Re-export: `from sdf_plan import apropose, aconfirm`
-- Behavior: equivalent semantics to `propose/confirm`
+Purpose:
+- Evaluate a proposed tool execution before runtime side effects occur.
 
-## Contract Models
+Recommended usage:
+- Always pass `ctx=GateContext(...)`, especially `workspace_id`.
+- Use `meta` for control data (`confirm_prompt`, `confirmed_token`).
+- Use `run_context` for execution evidence/context (`verified_resources`, `session_id`).
 
-Module: `sdf_plan.gate.contracts`
+Response fields:
+- `decision`
+- `reason`
+- `error_code`
+- `risk_flags`
+- `confirm_prompt`
+- `resume.token`
+- `resume.idempotency_key`
 
-- `GateDecision`: `ALLOW | REQUIRE_CONFIRM | BLOCK | WARN`
-- `GateErrorCode`: `INVALID_TOKEN | TOKEN_EXPIRED | TOKEN_TAMPERED | POLICY_BLOCKED`
-- `ToolGateRequest`
-- `ToolGateResponse`
-- `ConfirmRequest`
-- `ConfirmResponse`
-- `GateContext`
+### `confirm(...)`
 
-Schema snapshots are frozen under:
-- `tests/contract/snapshots/tool_gate_request.schema.json`
-- `tests/contract/snapshots/tool_gate_response.schema.json`
+```python
+confirm(token: str, user_ok: bool = True) -> ConfirmResponse
+```
+
+Purpose:
+- Validate and acknowledge a confirmation token.
+
+Behavior:
+- `user_ok=False` returns blocked/denied flow.
+- Valid token + `user_ok=True` returns `ALLOW` with `confirmed=True`.
+- Invalid/expired/tampered token returns `BLOCK` with error code.
+
+### Async wrappers
+
+```python
+await apropose(...)
+await aconfirm(...)
+```
+
+Semantics are equivalent to sync APIs.
+
+## Context Contract
+
+### `GateContext`
+
+```python
+GateContext(
+    workspace_id: str | None = None,
+    user_id: str | None = None,
+    session_id: str | None = None,
+    metadata: dict | None = None,
+)
+```
+
+Notes:
+- `workspace_id` is strongly recommended in all production usage.
+- In strict mode, write paths may require workspace scope.
+
+## Configuration API
+
+### `SdfPlanConfig`
+
+```python
+SdfPlanConfig(
+    secret: str | None = None,
+    token_ttl: int = 600,
+    audit_hook: Callable | None = None,
+    strict_args: bool = False,
+    environment: str = "development",
+    tool_args_validator: Callable[[str, dict], None] | None = None,
+)
+```
+
+### `configure(config)`
+
+```python
+configure(SdfPlanConfig(...)) -> None
+```
+
+Config semantics:
+- Non-development environments require a real secret.
+- Development fallback secret emits warning and is not for deployed usage.
+- `strict_args=True` enables stricter payload validation.
+- `tool_args_validator` allows host-defined deep schema enforcement.
 
 ## Policy API
 
 Module: `sdf_plan.policy`
 
+Key types/functions:
 - `GatePolicy`
 - `VerifyBeforeWriteMode`
 - `load_tool_risk_map(..., version="v2")`
 - `classify_tool(...)`
 - `policy_annotate(...)` (PlanSpec mode)
 
-Tool map versions:
-- `v2` (default): expanded common tools/risk categories
-- `v1`: compatibility alias map
+Important knobs:
+- `unknown_tool`
+- `write_requires_confirm`
+- `require_idempotency_for_write`
+- `verify_before_write`
+- `strict_mode`
 
-## Configuration API
+Policy precedence (typical):
+1. Explicit request-level policy
+2. Host/runtime defaults
+3. Library defaults
 
-Module: `sdf_plan.config`
-
-- `SdfPlanConfig`
-- `configure(...)`
-
-Key fields:
-- `secret`
-- `token_ttl`
-- `audit_hook`
-- `strict_args`
-- `tool_args_validator` (optional callable: `tool_name, args -> None | raises`)
-- `environment`
-
-## IR and Normalization API
+## Normalization and IR API
 
 Module: `sdf_plan.core`
 
@@ -97,37 +171,49 @@ Module: `sdf_plan.core`
 - `IRSequence`
 - `IRAction`
 
-## PlanSpec APIs (Backward Compatible)
+Input modes supported:
+- OpenAI-style tool-call payloads
+- Generic tool-call JSON
+- PlanSpec
 
+## PlanSpec Compatibility API
+
+Kept for backward compatibility:
 - `lint_plan(...)`
 - `preflight_lint(...)`
 - `policy_annotate(...)`
 - `PlanSpecEnvelope`
 - `PlanStep`
 
+Roundtrip caveat:
+- PlanSpec <-> IR is deterministic best-effort, not guaranteed lossless.
+
 ## Adapter API
 
 Thin adapters:
-- `langgraph_tool_gate_node` (module: `sdf_plan.adapters.langgraph`)
-- `crewai_tool_gate` (module: `sdf_plan.adapters.crewai`)
-- `langchain_tool_gate` (module: `sdf_plan.adapters.langchain`)
+- `sdf_plan.adapters.langgraph.langgraph_tool_gate_node`
+- `sdf_plan.adapters.crewai.crewai_tool_gate`
+- `sdf_plan.adapters.langchain.langchain_tool_gate`
 
-BYO adapter guidance:
-- `docs/ADAPTER_TEMPLATE.md`
+Custom adapters:
+- Follow `docs/ADAPTER_TEMPLATE.md`.
+- Keep adapter logic thin: convert framework payloads and call `propose/confirm`.
 
 ## Legacy Integrations
 
+Legacy modules remain for compatibility:
 - `sdf_plan.integrations.langgraph.sdf_node`
 - `sdf_plan.integrations.crewai.SDFTool`
 
-These modules are legacy decomposition-client integrations. New usage should
-prefer ToolGate runtime adapters under `sdf_plan.adapters.*`.
+They are decomposition-client oriented, not ToolGate-first runtime gating.
 
-## Strict Mode Notes
+## Schema Freeze / Contract Tests
 
-When strict mode is enabled (`GatePolicy.strict_mode=True` or `SdfPlanConfig(strict_args=True)`):
+Contract snapshots:
+- `tests/contract/snapshots/tool_gate_request.schema.json`
+- `tests/contract/snapshots/tool_gate_response.schema.json`
 
-- write tools require `ctx.workspace_id` (`STRICT_SCOPE_REQUIRED` on missing scope)
-- unknown top-level keys in `meta`/`ctx` are rejected
-- optional `tool_args_validator(tool_name, args)` runs for deep validation
-- strict hashing rejects non-JSON-native values
+Related tests:
+- `tests/contract/test_gate_contract.py`
+
+Any schema change should be deliberate and documented in changelog/release notes.

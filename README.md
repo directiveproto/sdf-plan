@@ -150,9 +150,12 @@ preflight_lint(plan, max_steps=12, safety_mode="safe")
 
 ## Guides
 
+- `docs/INDEX.md` (start here: full docs map)
 - `docs/API_REFERENCE.md`
 - `docs/ARCHITECTURE.md`
 - `docs/SECURITY_MODEL.md`
+- `docs/INTEGRATION_RECIPES.md`
+- `docs/TROUBLESHOOTING.md`
 - `docs/MIGRATION_PLANSPEC_TO_TOOLGATE.md`
 - `docs/PRODUCTION_HARDENING.md`
 - `docs/ADAPTER_TEMPLATE.md`

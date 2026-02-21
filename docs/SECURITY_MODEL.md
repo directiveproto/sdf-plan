@@ -1,94 +1,142 @@
 # Security Model
 
-This document describes the security posture and guarantees for `sdf-plan` v0.2.x.
+This document defines the security posture and boundaries for `sdf-plan`.
 
-## Threat Model (Library Scope)
+## Scope and Threat Model
 
-`sdf-plan` is an application library, not a full identity platform. It focuses on:
+`sdf-plan` is a runtime safety library. It is designed to:
+1. Prevent unsafe tool execution from silently proceeding.
+2. Bind confirmation to a specific intended action.
+3. Improve retry safety with deterministic idempotency derivation.
 
-1. Preventing unsafe tool execution from silently proceeding.
-2. Binding human confirmation to specific tool calls.
-3. Reducing duplicate side effects via idempotency keys.
+It is not a complete security platform. Out of scope:
+- identity provider and tenant authz systems
+- key vault/KMS operations
+- transport/network security
+- persistent replay prevention store
 
-Out of scope:
-- Key management infrastructure (KMS/HSM).
-- Multi-tenant auth/authz backend.
-- Network transport security (handled by host application).
+## Confirmation Token Model
 
-## Confirmation Token Security
-
-Tokens produced during confirm-required flows are:
-
-1. Signed (HMAC) to prevent tampering.
-2. Time-bounded (expiry enforced).
-3. Issued with a unique token ID (`jti`) for replay tracking in hosted layers.
+Confirmation tokens are:
+1. Signed with HMAC.
+2. Time-bounded (`exp` claim).
 3. Bound to:
-- tool name
-- canonical args hash
-- optional scope/workspace context
+   - tool name
+   - canonical args hash
+   - optional scope/workspace context
+4. Issued with `jti` for host replay tracking.
 
-Validation errors map to stable codes:
+### Security guarantees
+
+Token verification prevents:
+- payload tampering (signature mismatch)
+- stale confirmations (expired tokens)
+- cross-action reuse (binding mismatch if tool/args differ)
+
+### Stable token-related errors
+
 - `INVALID_TOKEN`
 - `TOKEN_TAMPERED`
 - `TOKEN_EXPIRED`
 
-### Replay protection using `jti`
+Hosted environments may enforce additional stricter codes.
 
-`sdf-plan` OSS token checks are stateless by design. For one-time confirmation semantics, hosts should store consumed token IDs.
+## Replay Protection
 
-Minimal pattern:
+Important:
+- OSS `confirm(...)` is stateless.
+- Strict one-time semantics require host storage keyed by token identity (`jti`).
 
-1. `verify_token(token)` to read `jti`.
-2. Check `jti` against your replay store.
-3. If unused, run `confirm(token, user_ok=True)`.
+Recommended host algorithm:
+1. Verify token and extract `jti`.
+2. Check replay store (`workspace_id + jti`).
+3. If unseen, execute `confirm(token, user_ok=True)`.
 4. Mark `jti` as consumed atomically.
 
-Recommended replay-store key:
-- `workspace_id + jti`
+If your host needs hard one-time guarantees, this step is mandatory.
 
-## Idempotency and Determinism
+## Secret Management
 
-Write-like actions can derive an idempotency key from:
-- scope
+Production requirement:
+- set `SDF_PLAN_TOKEN_SECRET` (or configure secret explicitly via `SdfPlanConfig`).
+
+Development fallback:
+- available only for local/dev flow
+- emits warning
+- not suitable for deployed usage
+
+Recommended secret handling:
+1. 256-bit random secret minimum
+2. managed secret store (for example cloud secret manager)
+3. periodic rotation with overlapping accept window in host layer
+
+## Scope and Context Requirements
+
+Recommended baseline:
+- always pass `GateContext(workspace_id=...)`.
+
+Strict mode hardening:
+- write-like actions should require workspace scope.
+- missing scope should be blocked rather than downgraded.
+
+This reduces cross-tenant mistakes and accidental global behavior.
+
+## Deterministic Idempotency
+
+For write paths, idempotency keys are derived from:
+- scope/workspace
 - tool name
-- canonicalized args hash
+- canonical args hash
 
-This helps host runtimes avoid duplicate side effects on retries.
+Benefits:
+- prevents duplicate side effects on retries
+- provides consistent deduping key for host runtimes
 
-## Policy Defaults
+## Strict Mode Hardening
 
-Default policy is safety-biased:
-- unknown tools require gating action
-- write-like tools require confirmation by default
-- write idempotency is required by default
+When strict controls are enabled:
+- invalid/unknown top-level payload fields are rejected
+- non-JSON-native types can be rejected in hashing paths
+- optional deep tool-args validator can enforce host schemas
+- scope requirements are enforced for sensitive/write actions
 
-Policy is configurable to fit host risk tolerance.
+## Adapter Security Posture
 
-## Adapter Safety
+Adapters must be thin wrappers.
 
-Official adapter in v0.2.0:
-- LangGraph only.
+Do:
+- translate framework payloads
+- call `propose/confirm`
+- propagate decisions/errors faithfully
 
-Adapters are intentionally thin and should not reimplement policy logic.
+Do not:
+- fork policy logic
+- bypass token validation semantics
+- mutate caller args/context objects
 
-## OSS vs Hosted Responsibilities
+## OSS vs Hosted Responsibility Split
 
-OSS library responsibilities:
+OSS (`sdf-plan`) handles:
 - deterministic local decisioning
-- token checks
-- lint and policy flow
+- token cryptographic checks
+- lint/policy orchestration
 
-Hosted/cloud responsibilities (outside this repo):
-- identity and workspace authorization
-- persistence and replay protection stores (recommended key: token `jti`)
-- audit log retention controls
-- billing/rate-limit enforcement
+Hosted platform handles:
+- identity, tenancy, and policy governance
+- replay store persistence (`jti`)
+- auditing, retention, billing, and quota controls
 
-## Validation and Tests
+## Security Validation
 
-Security behavior is enforced by tests covering:
-- token tamper rejection
-- token expiry handling
-- scope/tool/args binding behavior
-- confirm replay semantics
-- concurrency safety checks for propose/confirm
+Security-focused tests should cover:
+1. token tamper rejection
+2. token expiry enforcement
+3. token binding mismatch handling
+4. replay behavior and host replay strategy
+5. strict-mode scope and payload validation paths
+6. concurrency behavior on propose/confirm flows
+
+See:
+- `tests/unit/test_token_security.py`
+- `tests/integration/test_tool_gate_concurrency.py`
+- contract and integration suites in `tests/`

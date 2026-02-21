@@ -1,50 +1,118 @@
 # Architecture
 
-`sdf-plan` is organized around a ToolGate-first safety pipeline with optional PlanSpec support.
+`sdf-plan` is a ToolGate-first safety library with optional PlanSpec support.
 
-## High-Level Flow
+## Design Goals
 
-1. Input ingestion:
-- OpenAI-style tool calls
-- Generic tool call JSON
-- PlanSpec plans
-2. Normalization:
-- Convert inputs to sequence IR (`sdf_plan.core`)
-3. Policy and classification:
-- Tool risk classification and policy application (`sdf_plan.policy`)
-4. Linting:
-- Tool-mode and plan-mode lint checks (`sdf_plan.lint`)
-5. Gate decision:
-- `propose(...)` returns `ALLOW | REQUIRE_CONFIRM | WARN | BLOCK` (`sdf_plan.gate`)
-6. Confirmation:
-- `confirm(...)` verifies token and enables deterministic continuation (`sdf_plan.gate`)
+1. Universal runtime gating
+- Work across agent frameworks that emit tool calls.
+2. Deterministic outcomes
+- Same semantic input -> same decision path and idempotency behavior.
+3. Backward compatibility
+- Preserve PlanSpec flows while making ToolGate the primary path.
+4. Thin integration surface
+- Framework adapters should be lightweight wrappers over core API.
+5. Production-safe defaults
+- Unknown/risky operations should not silently pass.
 
-## Package Layout
+## End-to-End Data Flow
 
-- `src/sdf_plan/gate/`
-  - Contracts, token flow, idempotency helpers, runtime gate logic.
-- `src/sdf_plan/core/`
-  - IR models and normalization/conversion functions.
-- `src/sdf_plan/inputs/`
-  - OpenAI parser, generic tool call parser, PlanSpec parser.
-- `src/sdf_plan/policy/`
-  - Policy model, defaults, risk map, classification.
-- `src/sdf_plan/lint/`
-  - Tool-mode and plan-mode lint engines and rule registry.
-- `src/sdf_plan/adapters/`
-  - Official thin adapter(s). v0.2.0: LangGraph only.
-- `src/sdf_plan/integrations/`
-  - Legacy/community wrappers preserved for compatibility.
+### Propose flow
 
-## Design Principles
+1. Input arrives (tool name + args, or normalized through adapters/parsers).
+2. Input is normalized/canonicalized.
+3. Tool is classified (category + risk flags).
+4. Policy is resolved.
+5. Lint checks run (tool-mode and context-sensitive checks).
+6. Idempotency key is derived for write-like paths (if enabled).
+7. Decision is emitted:
+   - `ALLOW`
+   - `REQUIRE_CONFIRM` (with resume token)
+   - `WARN`
+   - `BLOCK`
 
-1. ToolGate-first:
-- Runtime tool-call interception is the primary API.
-2. Backward compatible:
-- Existing PlanSpec usage remains supported.
-3. Deterministic behavior:
-- Canonical hashing and stable policy flow.
-4. Thin adapters:
-- Adapters map framework objects to ToolGate API; policy and decision logic lives in core.
-5. Safe defaults:
-- Unknown tools do not silently pass in default policy posture.
+### Confirm flow
+
+1. Token is verified (signature + expiry + binding claims).
+2. User intent (`user_ok`) is applied.
+3. Result is returned:
+   - `ALLOW` with `confirmed=True`
+   - or `BLOCK` with reason/error
+
+## Core Components
+
+### `sdf_plan.gate`
+
+Responsibilities:
+- Runtime decisioning (`propose`)
+- Confirmation (`confirm`)
+- Contracts and response models
+- Token + idempotency orchestration
+
+### `sdf_plan.policy`
+
+Responsibilities:
+- Tool classification and risk mapping
+- Policy defaults and overrides
+- Verification posture controls (`verify_before_write`, strict mode)
+
+### `sdf_plan.lint`
+
+Responsibilities:
+- Tool-mode lint checks
+- Plan-mode lint checks (for PlanSpec compatibility)
+
+### `sdf_plan.core`
+
+Responsibilities:
+- Internal representation (IR) models
+- Input normalization (OpenAI/generic/PlanSpec to common shape)
+- Canonical hashing for deterministic keys/binding
+
+### `sdf_plan.adapters`
+
+Responsibilities:
+- Framework translation only
+- No policy duplication
+- No independent decision logic
+
+### `sdf_plan.integrations` (legacy)
+
+Responsibilities:
+- Compatibility for decomposition-client style usage
+- Not the recommended path for ToolGate-first runtime gating
+
+## Determinism and Consistency
+
+Determinism relies on:
+- canonical JSON hashing
+- stable policy resolution order
+- explicit decision/error vocabulary
+- shared helper logic across gate/lint/policy internals
+
+This avoids decision drift between integration paths.
+
+## Security-Critical Boundaries
+
+1. Secret management boundary
+- Token signing secret comes from config; non-dev fallback is not production-safe.
+2. Token trust boundary
+- Confirm tokens bind scope/tool/args-hash and include expiry.
+3. Replay boundary
+- OSS is stateless by default; strict one-time replay protection is host-managed (via `jti` store).
+
+## Extension Points
+
+1. Custom tool risk map overrides
+2. Host-level policy defaults
+3. Custom `tool_args_validator` in strict mode
+4. Custom adapters using `propose/confirm`
+5. Host audit hooks (decision telemetry)
+
+## What is intentionally out of scope
+
+- Hosted identity and tenancy control
+- Persistent replay stores
+- Billing, quota, and enterprise governance layers
+
+Those belong to hosted platforms (for example `sdf-cloud`), not this OSS library.
