@@ -1,5 +1,13 @@
 # sdf-plan
 
+[![CI](https://github.com/directiveproto/sdf-plan/actions/workflows/ci.yml/badge.svg?branch=main)](https://github.com/directiveproto/sdf-plan/actions/workflows/ci.yml)
+[![Release](https://github.com/directiveproto/sdf-plan/actions/workflows/release.yml/badge.svg)](https://github.com/directiveproto/sdf-plan/actions/workflows/release.yml)
+[![PyPI version](https://img.shields.io/pypi/v/sdf-plan?label=PyPI)](https://pypi.org/project/sdf-plan/)
+[![Python versions](https://img.shields.io/pypi/pyversions/sdf-plan.svg)](https://pypi.org/project/sdf-plan/)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
+[![Docs](https://img.shields.io/badge/docs-safetydf.com-0EA5E9)](https://safetydf.com/docs)
+[![LangGraph Ready](https://img.shields.io/badge/LangGraph-ready-0EA5E9)](https://github.com/directiveproto/sdf-plan/tree/main/examples/langgraph-full)
+
 **Trusted control for every agent tool call.**
 
 Most AI agent frameworks make it dangerously easy for the model to call tools that delete files, charge cards, or wipe production data.
