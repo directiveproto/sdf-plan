@@ -4,10 +4,11 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "sdf-plan"
-version = "0.2.8"
+version = "0.2.9"
 description = "Tool-call safety gate + deterministic confirm tokens for agent workflows."
 readme = "README.md"
 requires-python = ">=3.10"
+license = {text = "MIT"}
 authors = [{name = "DirectiveProto"}]
 dependencies = [
   "pydantic>=2.0,<3",
@@ -39,6 +40,7 @@ sdf-plan = "sdf_plan.cli:main"
 
 [tool.setuptools]
 package-dir = {"" = "src"}
+license-files = []
 
 [tool.setuptools.packages.find]
 where = ["src"]

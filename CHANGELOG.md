@@ -1,5 +1,23 @@
 # Changelog
 
+## 0.2.9 - 2026-02-26
+
+### Added
+- New example directories:
+  - `examples/langgraph-full/`
+  - `examples/crewai-thin-wrapper/`
+- Repository metadata-as-code in `.github/settings.yml` for About description, homepage, and topics.
+
+### Changed
+- README top section rewritten for landing-page style positioning.
+- README now includes:
+  - stronger trust/positioning copy
+  - a capabilities comparison table (`sdf-plan` vs manual checks / LangGraph interrupts / NeMo)
+  - updated badge set and demo references
+- Package metadata updated to ToolGate-first description and URLs:
+  - homepage: `https://safetydf.com`
+  - documentation: `https://safetydf.com/docs`
+
 ## 0.2.8 - 2026-02-16
 
 ### Added
