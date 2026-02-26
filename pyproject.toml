@@ -5,7 +5,7 @@ build-backend = "setuptools.build_meta"
 [project]
 name = "sdf-plan"
 version = "0.2.8"
-description = "PlanSpec + lint + safety gates for agent plans."
+description = "Tool-call safety gate + deterministic confirm tokens for agent workflows."
 readme = "README.md"
 requires-python = ">=3.10"
 authors = [{name = "DirectiveProto"}]
@@ -19,7 +19,8 @@ classifiers = [
 ]
 
 [project.urls]
-Homepage = "https://github.com/directiveproto/sdf-plan"
+Homepage = "https://safetydf.com"
+Documentation = "https://safetydf.com/docs"
 Source = "https://github.com/directiveproto/sdf-plan"
 Issues = "https://github.com/directiveproto/sdf-plan/issues"
 

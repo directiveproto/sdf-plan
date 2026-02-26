@@ -4,7 +4,10 @@
 Tool safety gates for agent workflows.
 
 [![CI](https://github.com/directiveproto/sdf-plan/actions/workflows/ci.yml/badge.svg?branch=main)](https://github.com/directiveproto/sdf-plan/actions/workflows/ci.yml)
+[![Tests](https://github.com/directiveproto/sdf-plan/actions/workflows/ci.yml/badge.svg?branch=main&label=tests)](https://github.com/directiveproto/sdf-plan/actions/workflows/ci.yml)
 [![PyPI version](https://img.shields.io/pypi/v/sdf-plan?label=PyPI&cacheSeconds=60)](https://pypi.org/project/sdf-plan/)
+[![PyPI downloads](https://img.shields.io/pypi/dm/sdf-plan?label=PyPI%20downloads)](https://pypi.org/project/sdf-plan/)
+[![LangGraph Ready](https://img.shields.io/badge/LangGraph-ready-0EA5E9)](https://github.com/directiveproto/sdf-plan/tree/main/examples/langgraph-full)
 [![Python versions](https://img.shields.io/pypi/pyversions/sdf-plan.svg)](https://pypi.org/project/sdf-plan/)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 
@@ -86,6 +89,16 @@ python examples/plan_mode_preflight.py
 |---|---|---|
 | `sdf_plan.adapters.*` | Runtime ToolGate decisions (`propose/confirm`) | Recommended |
 | `sdf_plan.integrations.*` | Legacy decomposition-client flow | Legacy (compat only) |
+
+## Comparison
+
+| Capability | `sdf-plan` ToolGate | Manual checks | LangGraph interrupts only | NVIDIA NeMo guardrails |
+|---|---|---|---|---|
+| Deterministic decision enum (`ALLOW/WARN/REQUIRE_CONFIRM/BLOCK`) | Yes | Usually ad hoc | Partial | Policy dependent |
+| Signed confirm token + resume binding (`jti`, args, scope) | Yes | No | No | No |
+| Idempotency keying for tool proposals | Yes | No | No | No |
+| Built-in thin adapters for agent frameworks | Yes (`LangGraph`, `CrewAI`, `LangChain`) | No | LangGraph-only | NeMo-native |
+| Drop-in local Python package for CI and runtime gates | Yes | N/A | No | Separate stack |
 
 ## CLI
 
@@ -181,6 +194,8 @@ preflight_lint(plan, max_steps=12, safety_mode="safe")
 - `examples/adapter_minimal.py`
 - `examples/langgraph_plangate_demo.py`
 - `examples/crewai_plangate_demo.py` (community-style example, not an official adapter contract in v0.2.0)
+- `examples/langgraph-full/demo.py` (full ToolGate-oriented LangGraph node wiring)
+- `examples/crewai-thin-wrapper/demo.py` (thin CrewAI wrapper integration)
 
 ## Testing (CI Parity)
 
