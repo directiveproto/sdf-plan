@@ -1,15 +1,28 @@
-
 # sdf-plan
 
-Tool safety gates for agent workflows.
+**Trusted control for every agent tool call.**
 
-[![CI](https://github.com/directiveproto/sdf-plan/actions/workflows/ci.yml/badge.svg?branch=main)](https://github.com/directiveproto/sdf-plan/actions/workflows/ci.yml)
-[![Tests](https://github.com/directiveproto/sdf-plan/actions/workflows/ci.yml/badge.svg?branch=main&label=tests)](https://github.com/directiveproto/sdf-plan/actions/workflows/ci.yml)
-[![PyPI version](https://img.shields.io/pypi/v/sdf-plan?label=PyPI&cacheSeconds=60)](https://pypi.org/project/sdf-plan/)
-[![PyPI downloads](https://img.shields.io/pypi/dm/sdf-plan?label=PyPI%20downloads)](https://pypi.org/project/sdf-plan/)
-[![LangGraph Ready](https://img.shields.io/badge/LangGraph-ready-0EA5E9)](https://github.com/directiveproto/sdf-plan/tree/main/examples/langgraph-full)
-[![Python versions](https://img.shields.io/pypi/pyversions/sdf-plan.svg)](https://pypi.org/project/sdf-plan/)
-[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
+Most AI agent frameworks make it dangerously easy for the model to call tools that delete files, charge cards, or wipe production data.
+
+The usual safety fixes ("better system prompt" or LangGraph interrupts) haven't felt sufficient for real production agents.
+
+So I built **sdf-plan** -- a lightweight, deterministic, local-first runtime safety layer that sits right before tool execution.
+
+You get real `ToolGate` decisions:
+
+- `ALLOW`
+- `REQUIRE_CONFIRM` (cryptographically signed tokens scoped to workspace + tool + args)
+- `WARN`
+- `BLOCK`
+
+Plus automatic idempotency keys, replay protection, tool-mode linting, and PlanSpec preflight.
+
+### 30-second quickstart
+
+```bash
+pip install sdf-plan
+# Set in production: export SDF_PLAN_TOKEN_SECRET="your-very-strong-secret"
+```
 
 ## Live Demo
 
