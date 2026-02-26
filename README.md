@@ -8,6 +8,14 @@ Tool safety gates for agent workflows.
 [![Python versions](https://img.shields.io/pypi/pyversions/sdf-plan.svg)](https://pypi.org/project/sdf-plan/)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 
+## Live Demo
+
+- Demo repo: https://github.com/directiveproto/sdf-plangate-demo
+- Run locally: `python -m plangate_demo.main`
+- Flow: `REQUIRE_CONFIRM -> CONFIRM -> ALLOW`
+
+![ToolGate flow demo](docs/assets/toolgate-flow.gif)
+
 ## 30-Second Quickstart (ToolGate-first)
 
 ```python
