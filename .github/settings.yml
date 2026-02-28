@@ -1,7 +1,7 @@
 repository:
   name: sdf-plan
   description: "Tool-call safety gate + deterministic confirm tokens for agent workflows."
-  homepage: "https://safetydf.com"
+  homepage: "https://www.safetydf.com/"
   topics:
     - ai-agents
     - tool-calling

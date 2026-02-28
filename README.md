@@ -5,7 +5,7 @@
 [![PyPI version](https://img.shields.io/pypi/v/sdf-plan?label=PyPI)](https://pypi.org/project/sdf-plan/)
 [![Python versions](https://img.shields.io/pypi/pyversions/sdf-plan.svg)](https://pypi.org/project/sdf-plan/)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
-[![Docs](https://img.shields.io/badge/docs-safetydf.com-0EA5E9)](https://safetydf.com/docs)
+[![Docs](https://img.shields.io/badge/docs-safetydf.com-0EA5E9)](https://www.safetydf.com/docs)
 [![LangGraph Ready](https://img.shields.io/badge/LangGraph-ready-0EA5E9)](https://github.com/directiveproto/sdf-plan/tree/main/examples/langgraph-full)
 
 **Trusted control for every agent tool call.**
@@ -31,6 +31,8 @@ Plus automatic idempotency keys, replay protection, tool-mode linting, and PlanS
 pip install sdf-plan
 # Set in production: export SDF_PLAN_TOKEN_SECRET="your-very-strong-secret"
 ```
+
+Website: https://www.safetydf.com/
 
 ## Live Demo
 

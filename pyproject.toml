@@ -20,8 +20,8 @@ classifiers = [
 ]
 
 [project.urls]
-Homepage = "https://safetydf.com"
-Documentation = "https://safetydf.com/docs"
+Homepage = "https://www.safetydf.com/"
+Documentation = "https://www.safetydf.com/docs"
 Source = "https://github.com/directiveproto/sdf-plan"
 Issues = "https://github.com/directiveproto/sdf-plan/issues"
 
